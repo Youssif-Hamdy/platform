@@ -60,11 +60,10 @@ const VerifyEmail: React.FC = () => {
 
       // التحقق من تطابق الرمز المدخل مع الرمز المحفوظ
       if (verificationCode.trim() === savedToken.trim()) {
-        console.log('✅ Codes match! Sending verification to API...');
-        
-        // إرسال طلب POST للـ API للتحقق من البريد الإلكتروني
+        console.log('✅ Codes match! Sending verification to /user API...');
+
         try {
-          const response = await fetch(`https://educational-platform-qg3zn6tpl-youssefs-projects-e2c35ebf.vercel.app/api/verify-email/${savedToken}/`, {
+          const response = await fetch(`/user/verify-email/${savedToken}/`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -72,8 +71,8 @@ const VerifyEmail: React.FC = () => {
             },
             body: JSON.stringify({
               token: savedToken,
-              verification_code: verificationCode
-            })
+              verification_code: verificationCode,
+            }),
           });
 
           console.log('=== VERIFICATION API RESPONSE ===');
@@ -81,19 +80,15 @@ const VerifyEmail: React.FC = () => {
           console.log('Response OK:', response.ok);
           console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
 
-          let data;
+          let data: any = {};
           try {
             const responseText = await response.text();
             console.log('Response Text:', responseText);
-
             if (responseText) {
               data = JSON.parse(responseText);
-            } else {
-              data = {};
             }
-          } catch (error) {
-            console.error('Error parsing JSON response:', error);
-            data = {};
+          } catch (jsonErr) {
+            console.error('Error parsing JSON response:', jsonErr);
           }
 
           if (response.ok) {
@@ -114,17 +109,24 @@ const VerifyEmail: React.FC = () => {
             if (data.detail) {
               setErrorMessage(data.detail);
             } else if (data.verification_code) {
-              setErrorMessage(`خطأ في رمز التحقق: ${data.verification_code.join(', ')}`);
+              try {
+                const joined = Array.isArray(data.verification_code)
+                  ? data.verification_code.join(', ')
+                  : String(data.verification_code);
+                setErrorMessage(`خطأ في رمز التحقق: ${joined}`);
+              } catch {
+                setErrorMessage('فشل في التحقق من البريد الإلكتروني. الرجاء المحاولة مرة أخرى.');
+              }
             } else {
               setErrorMessage('فشل في التحقق من البريد الإلكتروني. الرجاء المحاولة مرة أخرى.');
             }
           }
-        } catch (apiError) {
+        } catch (apiError: any) {
           console.error('=== API VERIFICATION ERROR ===');
           console.error('Error details:', apiError);
           console.error('==============================');
-          
-          if (apiError instanceof TypeError && apiError.message.includes('fetch')) {
+
+          if (apiError instanceof TypeError && String(apiError.message || '').includes('fetch')) {
             console.log('Network error - check if server is running and proxy is configured');
             setErrorMessage('خطأ في الاتصال بالخادم - تأكد من تشغيل الخادم وإعداد الـ proxy');
           } else {

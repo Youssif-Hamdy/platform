@@ -20,13 +20,17 @@ interface Profile {
   skills?: string[];
 }
 
-const Dashboard: React.FC = () => {
+const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [isDesktop, setIsDesktop] = useState<boolean>(false);
+  const isParentUser = (() => {
+    const value = (localStorage.getItem('userType') || '').toLowerCase();
+    return value === 'parent' || value === 'ولي أمر' || value === 'ولي الامر';
+  })();
 
   const refreshToken = async () => {
     try {
@@ -34,9 +38,9 @@ const Dashboard: React.FC = () => {
       if (!refresh) return null;
       
       console.log('=== REFRESH TOKEN REQUEST ===');
-      console.log('Request URL:', 'https://educational-platform-qg3zn6tpl-youssefs-projects-e2c35ebf.vercel.app/api/token/refresh/');
+      console.log('Request URL:', '/user/token/refresh/');
       
-      const res = await fetch('https://educational-platform-qg3zn6tpl-youssefs-projects-e2c35ebf.vercel.app/api/token/refresh/', {
+      const res = await fetch('/user/token/refresh/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh })
@@ -131,9 +135,9 @@ const Dashboard: React.FC = () => {
         }
 
         console.log('=== PROFILE REQUEST ===');
-        console.log('Request URL:', 'https://educational-platform-qg3zn6tpl-youssefs-projects-e2c35ebf.vercel.app/user/profile/');
+        console.log('Request URL:', '/user/profile/');
         
-        const res = await authFetch('https://educational-platform-qg3zn6tpl-youssefs-projects-e2c35ebf.vercel.app/user/profile/');
+        const res = await authFetch('/user/profile/');
         
         if (!res || !res.ok) {
           console.log('Profile request failed');
@@ -263,10 +267,19 @@ const Dashboard: React.FC = () => {
               <FileText className="w-5 h-5" />
               {!sidebarCollapsed && <span className="text-sm">التقارير</span>}
             </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-50 text-blue-700">
+            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-50 text-blue-700" onClick={() => { window.location.href = '/dashboard'; }}>
               <User className="w-5 h-5" />
               {!sidebarCollapsed && <span className="text-sm">البروفايل</span>}
             </button>
+            {isParentUser && (
+              <button
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition"
+                onClick={() => { window.location.href = '/child_link'; }}
+              >
+                <Users className="w-5 h-5" />
+                {!sidebarCollapsed && <span className="text-sm">ربط حساب الابن</span>}
+              </button>
+            )}
           </nav>
           <div className="pt-3 mt-3 border-t border-gray-100" />
           <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
@@ -306,10 +319,19 @@ const Dashboard: React.FC = () => {
                 <FileText className="w-5 h-5" />
                 <span className="text-sm">التقارير</span>
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-50 text-blue-700">
+              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-50 text-blue-700" onClick={() => { setMobileSidebarOpen(false); window.location.href = '/dashboard'; }}>
                 <User className="w-5 h-5" />
                 <span className="text-sm">البروفايل</span>
               </button>
+              {isParentUser && (
+                <button
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition"
+                  onClick={() => { setMobileSidebarOpen(false); window.location.href = '/child_link'; }}
+                >
+                  <Users className="w-5 h-5" />
+                  <span className="text-sm">ربط حساب الابن</span>
+                </button>
+              )}
             </nav>
           </div>
         </div>
@@ -324,7 +346,9 @@ const Dashboard: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6 pr-0 md:pr-0">الملف الشخصي</h1>
         </motion.div>
 
-        {loading ? (
+        {children ? (
+          <div className="pb-10">{children}</div>
+        ) : loading ? (
           <div className="text-center text-gray-600">...جار التحميل</div>
         ) : error ? (
           <div className="text-center text-red-600">{error}</div>

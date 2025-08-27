@@ -11,7 +11,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://web-0bben6p5dii9.up-de-fra1-k8s-1.apps.run-on-seenode.com',
+        target: 'https://educational-platform-qg3zn6tpl-youssefs-projects-e2c35ebf.vercel.app',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/api/, '/api'),
@@ -20,7 +20,8 @@ export default defineConfig({
         target: 'https://educational-platform-qg3zn6tpl-youssefs-projects-e2c35ebf.vercel.app',
         changeOrigin: true,
         secure: true,
-      }
-    }
-  }
+        rewrite: (path) => path.replace(/^\/user/, '/user'),
+      },
+    },
+  },
 })
