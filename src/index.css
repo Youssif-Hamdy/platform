@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* أضف هذه التنسيقات في ملف CSS منفصل أو في قسم <style> */
+
+/* تنسيقات عامة لسكرول بار */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+/* المسار (Track) */
+::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.5); /* bg-gray-50/50 */
+  border-radius: 4px;
+}
+
+/* المقبض (Thumb) */
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5); /* bg-blue-500/50 */
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+/* المقبض عند التحويم */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.8); /* bg-blue-500/80 */
+}
+
+/* تنسيقات خاصة بمحتوى النموذج */
+.form-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.5) rgba(241, 245, 249, 0.5);
+}
+
+/* إخفاء سكرول بار ولكنه يبقى فعالاً */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* حركة سلسة عند التمرير */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
