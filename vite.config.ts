@@ -9,15 +9,12 @@ export default defineConfig({
      tailwindcss(),
   ],
   server: {
+    port: 5173,
+    host: true, // يسمح بالوصول من أي IP
     proxy: {
-      '/api': {
-        target: 'https://educational-platform-qg3zn6tpl-youssefs-projects-e2c35ebf.vercel.app',
-        changeOrigin: true,
-        secure: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api'),
-      },
+    
       '/user': {
-        target: 'https://educational-platform-qg3zn6tpl-youssefs-projects-e2c35ebf.vercel.app',
+        target: 'https://educational-platform-git-main-youssefs-projects-e2c35ebf.vercel.app',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/user/, '/user'),

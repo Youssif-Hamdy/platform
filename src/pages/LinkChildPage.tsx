@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import Dashboard from './Dashboard';
+import { motion } from 'framer-motion';
 
-const ParentDashboard: React.FC = () => {
+const LinkChildPage: React.FC = () => {
   const [childName, setChildName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -46,7 +46,9 @@ const ParentDashboard: React.FC = () => {
   };
 
   return (
-    <Dashboard>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">ربط حساب الابن</h1>
+      
       <div className="max-w-xl mx-auto">
         <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">ربط حساب الابن</h2>
@@ -78,15 +80,8 @@ const ParentDashboard: React.FC = () => {
           )}
         </div>
       </div>
-    </Dashboard>
+    </motion.div>
   );
 };
 
-export default ParentDashboard;
-
-
-
-
-
-
-
+export default LinkChildPage;

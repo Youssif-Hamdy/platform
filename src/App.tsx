@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import SignIn from "./pages/SignIn";
 import VerifyEmail from "./component/VerifyEmail";
+import PasswordResetPage from "./pages/PasswordResetPage";
 import Dashboard from "./pages/Dashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
@@ -70,6 +71,7 @@ const App: React.FC = () => {
       <Route path="/" element={<Home />} />
       <Route path="/signin" element={<SignIn />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/password-reset" element={<PasswordResetPage />} />
       <Route
         path="/redirect-by-role"
         element={
@@ -116,15 +118,7 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/child_link"
-        element={
-          <ProtectedRoute>
-            <ParentDashboard />
-          </ProtectedRoute>
-        }
-      />
-
+    
 
 
 

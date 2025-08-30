@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { BookOpen, User, Award, Activity, Settings, LogOut, LayoutDashboard, GraduationCap, FileText, Users, ChevronLeft, Menu } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BookOpen, User, Award, Activity, Settings, LogOut, LayoutDashboard, GraduationCap, FileText, Users, ChevronLeft, Menu, AlertTriangle, X, CheckCircle } from 'lucide-react';
+import ProfilePage from './ProfilePage';
+import SettingsPage from './SettingsPage';
+import LinkChildPage from './LinkChildPage';
+import CoursesPage from './CoursesPage';
+import TeachersPage from './TeachersPage';
+import ReportsPage from './ReportsPage';
+import DashboardHomePage from './DashboardHomePage';
 
 interface Profile {
   id?: number;
@@ -27,6 +34,9 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [isDesktop, setIsDesktop] = useState<boolean>(false);
+
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'profile' | 'settings' | 'courses' | 'teachers' | 'reports' | 'linkChild'>('dashboard');
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const isParentUser = (() => {
     const value = (localStorage.getItem('userType') || '').toLowerCase();
     return value === 'parent' || value === 'ولي أمر' || value === 'ولي الامر';
@@ -120,6 +130,13 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     return res;
   };
 
+  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+
+
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -206,8 +223,52 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     return (profile && profile.profile_picture) || localStorage.getItem('profileImageUrl') || '';
   };
 
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <DashboardHomePage />;
+      case 'profile':
+        return <ProfilePage profile={profile} />;
+      case 'settings':
+        return <SettingsPage showToast={showToast} />;
+      case 'courses':
+        return <CoursesPage />;
+      case 'teachers':
+        return <TeachersPage />;
+      case 'reports':
+        return <ReportsPage />;
+      case 'linkChild':
+        return <LinkChildPage />;
+      default:
+        return <DashboardHomePage />;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50">
+      {/* Toast Notifications */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -100, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -100, scale: 0.8 }}
+            className={`fixed top-4 right-4 z-80 p-4 rounded-xl shadow-lg max-w-sm ${
+              toast.type === 'success' ? 'bg-green-500 text-white' :
+              toast.type === 'error' ? 'bg-red-500 text-white' :
+              'bg-blue-500 text-white'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {toast.type === 'success' && <CheckCircle className="w-5 h-5" />}
+              {toast.type === 'error' && <AlertTriangle className="w-5 h-5" />}
+              {toast.type === 'info' && <Activity className="w-5 h-5" />}
+              <span className="font-medium">{toast.message}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top headers */}
       {/* Mobile full-width header */}
       <div className="fixed top-0 inset-x-0 z-50 h-12 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 md:hidden">
@@ -251,30 +312,57 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
             </button>
           </div>
           <nav className="space-y-1">
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+            <button 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                currentPage === 'dashboard' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+              }`}
+              onClick={() => setCurrentPage('dashboard')}
+            >
               <LayoutDashboard className="w-5 h-5" />
               {!sidebarCollapsed && <span className="text-sm">لوحة التحكم</span>}
             </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+            <button 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                currentPage === 'courses' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+              }`}
+              onClick={() => setCurrentPage('courses')}
+            >
               <GraduationCap className="w-5 h-5" />
               {!sidebarCollapsed && <span className="text-sm">الدورات</span>}
             </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+            <button 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                currentPage === 'teachers' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+              }`}
+              onClick={() => setCurrentPage('teachers')}
+            >
               <Users className="w-5 h-5" />
               {!sidebarCollapsed && <span className="text-sm">المعلمون</span>}
             </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+            <button 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                currentPage === 'reports' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+              }`}
+              onClick={() => setCurrentPage('reports')}
+            >
               <FileText className="w-5 h-5" />
               {!sidebarCollapsed && <span className="text-sm">التقارير</span>}
             </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-50 text-blue-700" onClick={() => { window.location.href = '/dashboard'; }}>
+            <button 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                currentPage === 'profile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+              }`} 
+              onClick={() => setCurrentPage('profile')}
+            >
               <User className="w-5 h-5" />
               {!sidebarCollapsed && <span className="text-sm">البروفايل</span>}
             </button>
             {isParentUser && (
               <button
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition"
-                onClick={() => { window.location.href = '/child_link'; }}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                  currentPage === 'linkChild' ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
+                }`}
+                onClick={() => setCurrentPage('linkChild')}
               >
                 <Users className="w-5 h-5" />
                 {!sidebarCollapsed && <span className="text-sm">ربط حساب الابن</span>}
@@ -282,7 +370,12 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
             )}
           </nav>
           <div className="pt-3 mt-3 border-t border-gray-100" />
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+          <button 
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+              currentPage === 'settings' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+            }`}
+            onClick={() => setCurrentPage('settings')}
+          >
             <Settings className="w-5 h-5" />
             {!sidebarCollapsed && <span className="text-sm">الإعدادات</span>}
           </button>
@@ -303,36 +396,73 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
               <span className="text-base font-bold text-gray-900">تعلم</span>
             </div>
             <nav className="space-y-1">
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              <button 
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                  currentPage === 'dashboard' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+                onClick={() => { setMobileSidebarOpen(false); setCurrentPage('dashboard'); }}
+              >
                 <LayoutDashboard className="w-5 h-5" />
                 <span className="text-sm">لوحة التحكم</span>
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              <button 
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                  currentPage === 'courses' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+                onClick={() => { setMobileSidebarOpen(false); setCurrentPage('courses'); }}
+              >
                 <GraduationCap className="w-5 h-5" />
                 <span className="text-sm">الدورات</span>
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              <button 
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                  currentPage === 'teachers' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+                onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teachers'); }}
+              >
                 <Users className="w-5 h-5" />
                 <span className="text-sm">المعلمون</span>
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              <button 
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                  currentPage === 'reports' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+                onClick={() => { setMobileSidebarOpen(false); setCurrentPage('reports'); }}
+              >
                 <FileText className="w-5 h-5" />
                 <span className="text-sm">التقارير</span>
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-50 text-blue-700" onClick={() => { setMobileSidebarOpen(false); window.location.href = '/dashboard'; }}>
+              <button 
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                  currentPage === 'profile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                }`} 
+                onClick={() => { setMobileSidebarOpen(false); setCurrentPage('profile'); }}
+              >
                 <User className="w-5 h-5" />
                 <span className="text-sm">البروفايل</span>
               </button>
               {isParentUser && (
                 <button
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition"
-                  onClick={() => { setMobileSidebarOpen(false); window.location.href = '/child_link'; }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'linkChild' ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
+                  }`}
+                  onClick={() => { setMobileSidebarOpen(false); setCurrentPage('linkChild'); }}
                 >
                   <Users className="w-5 h-5" />
                   <span className="text-sm">ربط حساب الابن</span>
                 </button>
               )}
             </nav>
+            <div className="pt-3 mt-3 border-t border-gray-100" />
+            <button 
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                currentPage === 'settings' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+              }`}
+              onClick={() => { setMobileSidebarOpen(false); setCurrentPage('settings'); }}
+            >
+              <Settings className="w-5 h-5" />
+              <span className="text-sm">الإعدادات</span>
+            </button>
           </div>
         </div>
       </div>
@@ -342,10 +472,6 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
         className={`px-4 sm:px-6 lg:px-8 pt-12 md:pt-6`}
         style={{ marginLeft: isDesktop ? (sidebarCollapsed ? 80 : 256) : 0, transition: 'margin-left 300ms ease-in-out' }}
       >
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6 pr-0 md:pr-0">الملف الشخصي</h1>
-        </motion.div>
-
         {children ? (
           <div className="pb-10">{children}</div>
         ) : loading ? (
@@ -353,70 +479,13 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
         ) : error ? (
           <div className="text-center text-red-600">{error}</div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-10">
-            {/* Left column: Profile card */}
-            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="lg:col-span-1">
-              <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-sm p-6">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-blue-100 shadow mb-4 bg-blue-50 flex items-center justify-center">
-                    {avatarUrl() ? (
-                      <img src={avatarUrl()} alt="avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-12 h-12 text-blue-500" />
-                    )}
-                  </div>
-                  <div className="text-lg font-bold text-gray-900">{nameFromStorage()}</div>
-                  <div className="text-sm text-gray-500 mt-1">{profile?.user_type || localStorage.getItem('userType') || 'مستخدم'}</div>
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {(profile?.skills || []).map((s, idx) => (
-                      <span key={idx} className="px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-100">{s}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Right column: Info + Activities */}
-            <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="lg:col-span-2">
-              <div className="grid grid-cols-1 gap-6">
-                <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-sm p-6">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4">المعلومات العامة</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="flex justify-between border-b border-gray-100 pb-2"><span className="text-gray-500">الاسم</span><span className="text-gray-900">{nameFromStorage()}</span></div>
-                    <div className="flex justify-between border-b border-gray-100 pb-2"><span className="text-gray-500">البريد</span><span className="text-gray-900">{profile?.email || '-'}</span></div>
-                    <div className="flex justify-between border-b border-gray-100 pb-2"><span className="text-gray-500">النوع</span><span className="text-gray-900">{profile?.user_type || '-'}</span></div>
-                    <div className="flex justify-between border-b border-gray-100 pb-2"><span className="text-gray-500">الهاتف</span><span className="text-gray-900">{profile?.phone_number || '-'}</span></div>
-                    <div className="flex justify-between border-b border-gray-100 pb-2"><span className="text-gray-500">تاريخ الميلاد</span><span className="text-gray-900">{profile?.date_of_birth || '-'}</span></div>
-                    <div className="flex justify-between border-b border-gray-100 pb-2"><span className="text-gray-500">الدولة</span><span className="text-gray-900">{profile?.country || '-'}</span></div>
-                    <div className="flex justify-between border-b border-gray-100 pb-2"><span className="text-gray-500">المدينة</span><span className="text-gray-900">{profile?.city || '-'}</span></div>
-                    <div className="flex justify-between border-b border-gray-100 pb-2"><span className="text-gray-500">العنوان</span><span className="text-gray-900">{profile?.address || '-'}</span></div>
-                  </div>
-                </div>
-
-                <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-sm p-6">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4">آخر الأنشطة</h2>
-                  <div className="space-y-4">
-                    {[1,2,3].map((i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center">
-                            {i === 1 ? <Activity className="w-5 h-5" /> : i === 2 ? <Award className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold text-gray-800">نشاط {i}</div>
-                            <div className="text-xs text-gray-500">وصف موجز للنشاط</div>
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-400">اليوم</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+          <div className="pb-10">
+            {renderCurrentPage()}
           </div>
         )}
       </main>
+
+
     </div>
   );
 };
