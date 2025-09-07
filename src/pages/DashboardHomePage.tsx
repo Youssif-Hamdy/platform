@@ -1,10 +1,126 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Users, Award, Clock, TrendingUp, Calendar, Target, CheckCircle } from 'lucide-react';
+import { BookOpen, Users, Award, Clock, TrendingUp, Calendar, Target, CheckCircle, AlertCircle } from 'lucide-react';
+
+interface DashboardData {
+  enrolled_courses: number;
+  study_hours: number;
+  completed_quizzes: number;
+  average_score: number;
+  recent_activities: Array<{
+    id: number;
+    title: string;
+    description: string;
+    time: string;
+    type: string;
+  }>;
+  upcoming_tasks: Array<{
+    id: number;
+    title: string;
+    due_date: string;
+    priority: string;
+  }>;
+  weekly_progress: Array<{
+    subject: string;
+    progress: number;
+  }>;
+}
 
 const DashboardHomePage: React.FC = () => {
-  // بيانات تجريبية للإحصائيات
-  const stats = [
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+
+  const isStudentUser = (() => {
+    const value = (localStorage.getItem('userType') || '').toLowerCase();
+    return value === 'student' || value === 'طالب' || value === 'طالبة';
+  })();
+
+  const authFetch = async (url: string, init?: RequestInit) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      window.location.href = '/signin';
+      return new Response(null, { status: 401 });
+    }
+    
+    let res = await fetch(url, {
+      ...init,
+      headers: {
+        ...(init && init.headers ? init.headers : {}),
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (res.status === 401) {
+      const refresh = localStorage.getItem('refreshToken');
+      if (refresh) {
+        const refreshRes = await fetch('/user/token/refresh/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh })
+        });
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          if (data.access) localStorage.setItem('accessToken', data.access);
+          res = await fetch(url, {
+            ...init,
+            headers: {
+              ...(init && init.headers ? init.headers : {}),
+              'Authorization': `Bearer ${data.access}`,
+              'Accept': 'application/json'
+            }
+          });
+        } else {
+          localStorage.clear();
+          window.location.href = '/signin';
+          return new Response(null, { status: 401 });
+        }
+      } else {
+        localStorage.clear();
+        window.location.href = '/signin';
+        return new Response(null, { status: 401 });
+      }
+    }
+    return res;
+  };
+
+  const loadDashboardData = async () => {
+    if (!isStudentUser) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      
+      const res = await authFetch('/student/dashboard/');
+      
+      if (!res || !res.ok) {
+        console.log('Dashboard API failed, using default data');
+        setDashboardData(null); // سيستخدم البيانات الافتراضية
+        return;
+      }
+      
+      const data = await res.json();
+      console.log('Dashboard data loaded:', data);
+      setDashboardData(data);
+    } catch (e) {
+      console.error('Error loading dashboard data:', e);
+      console.log('Using default data due to error');
+      setDashboardData(null); // سيستخدم البيانات الافتراضية
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  // بيانات تجريبية للإحصائيات (للطلاب الآخرين)
+  const defaultStats = [
     {
       title: 'الدورات المسجلة',
       value: '8',
@@ -39,7 +155,43 @@ const DashboardHomePage: React.FC = () => {
     }
   ];
 
-  const recentActivities = [
+  // استخدام البيانات من API أو البيانات الافتراضية
+  const stats = isStudentUser && dashboardData ? [
+    {
+      title: 'الدورات المسجلة',
+      value: (dashboardData.enrolled_courses || 0).toString(),
+      change: '+2',
+      trend: 'up',
+      icon: BookOpen,
+      color: 'blue'
+    },
+    {
+      title: 'ساعات الدراسة',
+      value: (dashboardData.study_hours || 0).toString(),
+      change: '+6',
+      trend: 'up',
+      icon: Clock,
+      color: 'green'
+    },
+    {
+      title: 'الاختبارات المكتملة',
+      value: (dashboardData.completed_quizzes || 0).toString(),
+      change: '+3',
+      trend: 'up',
+      icon: CheckCircle,
+      color: 'purple'
+    },
+    {
+      title: 'متوسط الدرجات',
+      value: `${dashboardData.average_score || 0}%`,
+      change: '+5%',
+      trend: 'up',
+      icon: Award,
+      color: 'orange'
+    }
+  ] : defaultStats;
+
+  const defaultRecentActivities = [
     {
       id: 1,
       title: 'أكملت درس الرياضيات',
@@ -63,7 +215,7 @@ const DashboardHomePage: React.FC = () => {
     }
   ];
 
-  const upcomingTasks = [
+  const defaultUpcomingTasks = [
     {
       id: 1,
       title: 'واجب الرياضيات',
@@ -84,6 +236,18 @@ const DashboardHomePage: React.FC = () => {
     }
   ];
 
+  const defaultWeeklyProgress = [
+    { subject: 'الرياضيات', progress: 70 },
+    { subject: 'اللغة العربية', progress: 78 },
+    { subject: 'العلوم', progress: 86 },
+    { subject: 'اللغة الإنجليزية', progress: 94 }
+  ];
+
+  // استخدام البيانات من API أو البيانات الافتراضية
+  const recentActivities = isStudentUser && dashboardData && dashboardData.recent_activities ? dashboardData.recent_activities : defaultRecentActivities;
+  const upcomingTasks = isStudentUser && dashboardData && dashboardData.upcoming_tasks ? dashboardData.upcoming_tasks : defaultUpcomingTasks;
+  const weeklyProgress = isStudentUser && dashboardData && dashboardData.weekly_progress ? dashboardData.weekly_progress : defaultWeeklyProgress;
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'bg-red-100 text-red-800';
@@ -101,6 +265,17 @@ const DashboardHomePage: React.FC = () => {
       default: return 'غير محدد';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">جار تحميل لوحة التحكم...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -194,17 +369,17 @@ const DashboardHomePage: React.FC = () => {
           <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 mt-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">التقدم الأسبوعي</h3>
             <div className="space-y-4">
-              {['الرياضيات', 'اللغة العربية', 'العلوم', 'اللغة الإنجليزية'].map((subject, index) => (
-                <div key={subject} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{subject}</span>
+              {weeklyProgress.map((item, index) => (
+                <div key={item.subject} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">{item.subject}</span>
                   <div className="flex items-center gap-2">
                     <div className="w-24 bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-blue-600 h-2 rounded-full" 
-                        style={{ width: `${70 + index * 8}%` }}
+                        style={{ width: `${item.progress}%` }}
                       ></div>
                     </div>
-                    <span className="text-sm font-medium text-gray-900">{70 + index * 8}%</span>
+                    <span className="text-sm font-medium text-gray-900">{item.progress}%</span>
                   </div>
                 </div>
               ))}

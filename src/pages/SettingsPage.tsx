@@ -221,3 +221,4 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ showToast }) => {
 };
 
 export default SettingsPage;
+

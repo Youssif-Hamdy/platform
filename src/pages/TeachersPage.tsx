@@ -130,3 +130,8 @@ const TeachersPage: React.FC = () => {
 };
 
 export default TeachersPage;
+
+
+
+
+

@@ -104,3 +104,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile }) => {
 };
 
 export default ProfilePage;
+
+
+
+
+
+
+

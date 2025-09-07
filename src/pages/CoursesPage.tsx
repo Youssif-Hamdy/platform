@@ -118,3 +118,8 @@ const CoursesPage: React.FC = () => {
 };
 
 export default CoursesPage;
+
+
+
+
+

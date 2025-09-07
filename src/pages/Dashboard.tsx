@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, User, Award, Activity, Settings, LogOut, LayoutDashboard, GraduationCap, FileText, Users, ChevronLeft, Menu, AlertTriangle, X, CheckCircle } from 'lucide-react';
+import { BookOpen, User, Activity, Settings, LogOut, LayoutDashboard, GraduationCap, FileText, Users, ChevronLeft, Menu, AlertTriangle, CheckCircle, Upload, Bell } from 'lucide-react';
 import ProfilePage from './ProfilePage';
 import SettingsPage from './SettingsPage';
 import LinkChildPage from './LinkChildPage';
@@ -8,6 +8,15 @@ import CoursesPage from './CoursesPage';
 import TeachersPage from './TeachersPage';
 import ReportsPage from './ReportsPage';
 import DashboardHomePage from './DashboardHomePage';
+import TeacherCreateCourse from './TeacherCreateCourse';
+import TeacherCoursesList from './TeacherCoursesList';
+import TeacherCourseDetails from './TeacherCourseDetails';
+import { ManageStudentsPage, EngagementReportsPage, SendNotificationsPage } from './TeacherPlaceholders';
+import TeacherAddQuiz from './TeacherAddQuiz';
+import TeacherUploadContent from './TeacherUploadContent';
+import StudentCoursesPage from './StudentCoursesPage';
+import StudentMyCoursesPage from './StudentMyCoursesPage';
+import StudentCourseDetailsPage from './StudentCourseDetailsPage';
 
 interface Profile {
   id?: number;
@@ -35,11 +44,40 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [isDesktop, setIsDesktop] = useState<boolean>(false);
 
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'profile' | 'settings' | 'courses' | 'teachers' | 'reports' | 'linkChild'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<
+    | 'dashboard'
+    | 'profile'
+    | 'settings'
+    | 'courses'
+    | 'teachers'
+    | 'reports'
+    | 'linkChild'
+    | 'teacherCreateCourse'
+    | 'teacherUploadContent'
+    | 'teacherAddExams'
+    | 'teacherManageStudents'
+    | 'teacherEngagementReports'
+    | 'teacherSendNotifications'
+    | 'teacherCoursesList'
+    | 'teacherCourseDetails'
+    | 'studentCourses'
+    | 'studentMyCourses'
+    | 'studentCourseDetails'
+  >('dashboard');
+  const [selectedCourse, setSelectedCourse] = useState<{ id: string | number; title?: string } | null>(null);
+  const [selectedSectionTitle, setSelectedSectionTitle] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const isParentUser = (() => {
     const value = (localStorage.getItem('userType') || '').toLowerCase();
     return value === 'parent' || value === 'ولي أمر' || value === 'ولي الامر';
+  })();
+  const isTeacherUser = (() => {
+    const value = (localStorage.getItem('userType') || '').toLowerCase();
+    return value === 'teacher' || value === 'معلم' || value === 'مدرس';
+  })();
+  const isStudentUser = (() => {
+    const value = (localStorage.getItem('userType') || '').toLowerCase();
+    return value === 'student' || value === 'طالب' || value === 'طالبة';
   })();
 
   const refreshToken = async () => {
@@ -215,13 +253,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     };
   }, []);
 
-  const nameFromStorage = () => {
-    return localStorage.getItem('displayName') || profile?.username || 'المستخدم';
-  };
-
-  const avatarUrl = () => {
-    return (profile && profile.profile_picture) || localStorage.getItem('profileImageUrl') || '';
-  };
+  
 
   const renderCurrentPage = () => {
     switch (currentPage) {
@@ -239,6 +271,55 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
         return <ReportsPage />;
       case 'linkChild':
         return <LinkChildPage />;
+      case 'teacherCreateCourse':
+        return <TeacherCreateCourse />;
+      case 'teacherUploadContent':
+        return <TeacherUploadContent />;
+      case 'teacherAddExams':
+        return <TeacherAddQuiz />;
+      case 'teacherManageStudents':
+        return <ManageStudentsPage />;
+      case 'teacherEngagementReports':
+        return <EngagementReportsPage />;
+      case 'teacherSendNotifications':
+        return <SendNotificationsPage />;
+      case 'teacherCoursesList':
+        return (
+          <TeacherCoursesList
+            onOpenCourse={(course) => {
+              setSelectedCourse({ id: course.id, title: course.title });
+              setCurrentPage('teacherCourseDetails');
+            }}
+          />
+        );
+      case 'teacherCourseDetails':
+        return selectedCourse ? (
+          <TeacherCourseDetails
+            courseId={selectedCourse.id}
+            courseTitle={selectedCourse.title}
+            onAddQuiz={(sectionTitle) => {
+              setSelectedSectionTitle(sectionTitle);
+              setCurrentPage('teacherAddExams');
+            }}
+          />
+        ) : (
+          <DashboardHomePage />
+        );
+      case 'teacherAddExams':
+        return <TeacherAddQuiz courseTitle={selectedCourse?.title} sectionTitle={selectedSectionTitle ?? undefined} />;
+      case 'studentCourses':
+        return <StudentCoursesPage />;
+      case 'studentMyCourses':
+        return <StudentMyCoursesPage />;
+      case 'studentCourseDetails':
+        return selectedCourse ? (
+          <StudentCourseDetailsPage
+            courseId={selectedCourse.id}
+            courseTitle={selectedCourse.title}
+          />
+        ) : (
+          <DashboardHomePage />
+        );
       default:
         return <DashboardHomePage />;
     }
@@ -271,7 +352,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
 
       {/* Top headers */}
       {/* Mobile full-width header */}
-      <div className="fixed top-0 inset-x-0 z-50 h-12 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 md:hidden">
+      <div className={`fixed top-0 inset-x-0 z-50 h-12 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 md:hidden ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails') ? '!hidden' : ''}`}>
         <button onClick={() => setMobileSidebarOpen(true)} className="p-2 rounded-md bg-white border border-gray-200 shadow" aria-label="Open sidebar">
           <Menu className="w-5 h-5 text-blue-700" />
         </button>
@@ -286,7 +367,8 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       </div>
 
       {/* Desktop inline header inside content area (no overlap with sidebar) */}
-      <div className="hidden md:block" style={{ marginLeft: isDesktop ? (sidebarCollapsed ? 80 : 256) : 0, transition: 'margin-left 300ms ease-in-out' }}>
+      <div className={`hidden md:block ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses')
+ ? '!hidden' : ''}`} style={{ marginLeft: isDesktop ? (sidebarCollapsed ? 80 : 256) : 0, transition: 'margin-left 300ms ease-in-out' }}>
         <div className="h-14 flex items-center justify-end px-4 border-b border-gray-100 bg-white/70 backdrop-blur-md">
           <button className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-blue-50 text-gray-700 shadow" aria-label="Settings">
             <Settings className="w-4 h-4" />
@@ -298,7 +380,8 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       </div>
 
       {/* Sidebar (desktop) */}
-      <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} transition-[width] duration-300 fixed left-0 top-0 bottom-0 bg-white/80 backdrop-blur-xl border-r border-gray-100 z-60 hidden md:flex`}>
+      <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} transition-[width] duration-300 fixed left-0 top-0 bottom-0 bg-white/80 backdrop-blur-xl border-r border-gray-100 z-60 hidden md:flex ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses')
+ ? '!hidden' : ''}`}>
         <div className="w-full h-full p-4 overflow-y-auto">
           <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-4`}>
             {!sidebarCollapsed && (
@@ -321,33 +404,124 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
               <LayoutDashboard className="w-5 h-5" />
               {!sidebarCollapsed && <span className="text-sm">لوحة التحكم</span>}
             </button>
-            <button 
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                currentPage === 'courses' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-              }`}
-              onClick={() => setCurrentPage('courses')}
-            >
-              <GraduationCap className="w-5 h-5" />
-              {!sidebarCollapsed && <span className="text-sm">الدورات</span>}
-            </button>
-            <button 
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                currentPage === 'teachers' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-              }`}
-              onClick={() => setCurrentPage('teachers')}
-            >
-              <Users className="w-5 h-5" />
-              {!sidebarCollapsed && <span className="text-sm">المعلمون</span>}
-            </button>
-            <button 
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                currentPage === 'reports' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-              }`}
-              onClick={() => setCurrentPage('reports')}
-            >
-              <FileText className="w-5 h-5" />
-              {!sidebarCollapsed && <span className="text-sm">التقارير</span>}
-            </button>
+            {isTeacherUser ? (
+              <>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'teacherCoursesList' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('teacherCoursesList')}
+                >
+                  <GraduationCap className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">دوراتي</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'teacherCreateCourse' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('teacherCreateCourse')}
+                >
+                  <FileText className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">إنشاء كورس جديد</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'teacherUploadContent' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('teacherUploadContent')}
+                >
+                  <Upload className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">رفع الفيديوهات والمحتوى</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'teacherAddExams' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('teacherAddExams')}
+                >
+                  <FileText className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">إضافة اختبارات</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'teacherManageStudents' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('teacherManageStudents')}
+                >
+                  <Users className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">إدارة الطلاب المسجلين</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'teacherEngagementReports' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('teacherEngagementReports')}
+                >
+                  <FileText className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">تقارير التفاعل والمشاهدة</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'teacherSendNotifications' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('teacherSendNotifications')}
+                >
+                  <Bell className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">إرسال إشعارات للطلاب</span>}
+                </button>
+              </>
+            ) : isStudentUser ? (
+              <>
+                <button 
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'studentCourses' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('studentCourses')}
+                >
+                  <GraduationCap className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">مشاهدة الكورسات</span>}
+                </button>
+                <button 
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'studentMyCourses' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('studentMyCourses')}
+                >
+                  <BookOpen className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">دخول إلى الكورس</span>}
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'courses' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('courses')}
+                >
+                  <GraduationCap className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">الدورات</span>}
+                </button>
+                <button 
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'teachers' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('teachers')}
+                >
+                  <Users className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">المعلمون</span>}
+                </button>
+                <button 
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'reports' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('reports')}
+                >
+                  <FileText className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">التقارير</span>}
+                </button>
+              </>
+            )}
             <button 
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
                 currentPage === 'profile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
@@ -387,7 +561,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       </aside>
 
       {/* Sidebar (mobile drawer) */}
-      <div className={`fixed inset-0 z-60 md:hidden ${mobileSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-60 md:hidden ${mobileSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'} ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails') ? '!hidden' : ''}`}>
         <div className={`absolute inset-0 bg-black/30 transition-opacity ${mobileSidebarOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setMobileSidebarOpen(false)} />
         <div className={`absolute top-0 bottom-0 left-0 w-64 bg-white shadow-xl transition-transform ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-full p-4 overflow-y-auto">
@@ -405,33 +579,124 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
                 <LayoutDashboard className="w-5 h-5" />
                 <span className="text-sm">لوحة التحكم</span>
               </button>
-              <button 
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                  currentPage === 'courses' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-                }`}
-                onClick={() => { setMobileSidebarOpen(false); setCurrentPage('courses'); }}
-              >
-                <GraduationCap className="w-5 h-5" />
-                <span className="text-sm">الدورات</span>
-              </button>
-              <button 
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                  currentPage === 'teachers' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-                }`}
-                onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teachers'); }}
-              >
-                <Users className="w-5 h-5" />
-                <span className="text-sm">المعلمون</span>
-              </button>
-              <button 
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                  currentPage === 'reports' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-                }`}
-                onClick={() => { setMobileSidebarOpen(false); setCurrentPage('reports'); }}
-              >
-                <FileText className="w-5 h-5" />
-                <span className="text-sm">التقارير</span>
-              </button>
+              {isTeacherUser ? (
+                <>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'teacherCoursesList' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teacherCoursesList'); }}
+                  >
+                    <GraduationCap className="w-5 h-5" />
+                    <span className="text-sm">دوراتي</span>
+                  </button>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'teacherCreateCourse' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teacherCreateCourse'); }}
+                  >
+                    <FileText className="w-5 h-5" />
+                    <span className="text-sm">إنشاء كورس جديد</span>
+                  </button>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'teacherUploadContent' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teacherUploadContent'); }}
+                  >
+                    <Upload className="w-5 h-5" />
+                    <span className="text-sm">رفع الفيديوهات والمحتوى</span>
+                  </button>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'teacherAddExams' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teacherAddExams'); }}
+                  >
+                    <FileText className="w-5 h-5" />
+                    <span className="text-sm">إضافة اختبارات</span>
+                  </button>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'teacherManageStudents' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teacherManageStudents'); }}
+                  >
+                    <Users className="w-5 h-5" />
+                    <span className="text-sm">إدارة الطلاب المسجلين</span>
+                  </button>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'teacherEngagementReports' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teacherEngagementReports'); }}
+                  >
+                    <FileText className="w-5 h-5" />
+                    <span className="text-sm">تقارير التفاعل والمشاهدة</span>
+                  </button>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'teacherSendNotifications' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teacherSendNotifications'); }}
+                  >
+                    <Bell className="w-5 h-5" />
+                    <span className="text-sm">إرسال إشعارات للطلاب</span>
+                  </button>
+                </>
+              ) : isStudentUser ? (
+                <>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'studentCourses' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('studentCourses'); }}
+                  >
+                    <GraduationCap className="w-5 h-5" />
+                    <span className="text-sm">مشاهدة الكورسات</span>
+                  </button>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'studentMyCourses' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('studentMyCourses'); }}
+                  >
+                    <BookOpen className="w-5 h-5" />
+                    <span className="text-sm">دخول إلى الكورس</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'courses' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('courses'); }}
+                  >
+                    <GraduationCap className="w-5 h-5" />
+                    <span className="text-sm">الدورات</span>
+                  </button>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'teachers' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teachers'); }}
+                  >
+                    <Users className="w-5 h-5" />
+                    <span className="text-sm">المعلمون</span>
+                  </button>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'reports' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('reports'); }}
+                  >
+                    <FileText className="w-5 h-5" />
+                    <span className="text-sm">التقارير</span>
+                  </button>
+                </>
+              )}
               <button 
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
                   currentPage === 'profile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
@@ -468,22 +733,31 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       </div>
 
       {/* Main */}
-      <main
-        className={`px-4 sm:px-6 lg:px-8 pt-12 md:pt-6`}
-        style={{ marginLeft: isDesktop ? (sidebarCollapsed ? 80 : 256) : 0, transition: 'margin-left 300ms ease-in-out' }}
-      >
-        {children ? (
-          <div className="pb-10">{children}</div>
-        ) : loading ? (
-          <div className="text-center text-gray-600">...جار التحميل</div>
-        ) : error ? (
-          <div className="text-center text-red-600">{error}</div>
-        ) : (
-          <div className="pb-10">
-            {renderCurrentPage()}
-          </div>
-        )}
-      </main>
+     {/* Main */}
+<main
+  className={`${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses') 
+    ? 'p-0' 
+    : 'px-4 sm:px-6 lg:px-8 pt-12 md:pt-6'}`}
+  style={{ 
+    marginLeft: (currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses') 
+      ? 0 
+      : (isDesktop ? (sidebarCollapsed ? 80 : 256) : 0), 
+    transition: 'margin-left 300ms ease-in-out' 
+  }}
+>
+  {children ? (
+    <div className="pb-10">{children}</div>
+  ) : loading ? (
+    <div className="text-center text-gray-600">...جار التحميل</div>
+  ) : error ? (
+    <div className="text-center text-red-600">{error}</div>
+  ) : (
+    <div className="pb-10">
+      {renderCurrentPage()}
+    </div>
+  )}
+</main>
+
 
 
     </div>

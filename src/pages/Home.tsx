@@ -29,6 +29,7 @@ import {
   
 } from 'react-icons/fa';
 import Navbar from '../component/Navbar';
+import { motion, useScroll, useTransform } from 'framer-motion';
 
 // Images array for slider
 const sliderImages = [
@@ -100,6 +101,7 @@ const LearningPlatform: React.FC = () => {
   const [slideDirection, setSlideDirection] = useState('next');
   const [isAnimating, setIsAnimating] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  // Atropos will handle 3D interactions; no manual tilt state needed
 
   // Check if mobile
   useEffect(() => {
@@ -145,6 +147,8 @@ const LearningPlatform: React.FC = () => {
     setCurrentSlide(index);
     setTimeout(() => setIsAnimating(false), 800);
   };
+
+  // Removed manual tilt handlers; Atropos manages mouse/parallax
 
   const features: FeatureItem[] = [
     {
@@ -236,12 +240,18 @@ const LearningPlatform: React.FC = () => {
     }
   ];
 
+  const { scrollYProgress } = useScroll();
+  const heroRotateX = useTransform(scrollYProgress, [0, 0.2], [0, -8]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.96]);
+  const statsParallax = useTransform(scrollYProgress, [0.1, 0.35], [0, -60]);
+  const coursesParallax = useTransform(scrollYProgress, [0.2, 0.5], [40, -40]);
+
   return (
     <div className="min-h-screen bg-white overflow-x-hidden" dir="rtl">
       <Navbar />
 
       {/* Hero Slider Section - Responsive */}
-      <section className="relative h-screen overflow-hidden">
+      <motion.section className="relative h-screen overflow-hidden" style={{ rotateX: heroRotateX, scale: heroScale }}>
         {/* Slider Container */}
         <div className="relative w-full h-full">
           {sliderImages.map((image, index) => (
@@ -271,7 +281,7 @@ const LearningPlatform: React.FC = () => {
                           ? 'translate-y-10 opacity-0'
                           : '-translate-y-10 opacity-0'
                       }`}>
-                      <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-8xl font-bold text-white mb-4 sm:mb-6 leading-tight">
+                      <h1 data-atropos-offset="8" className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-8xl font-bold text-white mb-4 sm:mb-6 leading-tight">
                         <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-purple-400 bg-clip-text text-transparent">
                           {sliderContent[currentSlide].title}
                         </span>
@@ -285,7 +295,7 @@ const LearningPlatform: React.FC = () => {
                           ? 'translate-y-10 opacity-0'
                           : '-translate-y-10 opacity-0'
                       }`}>
-                      <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-6xl text-white/90 mb-4 sm:mb-6 lg:mb-8 font-light">
+                      <h2 data-atropos-offset="6" className="text-xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-6xl text-white/90 mb-4 sm:mb-6 lg:mb-8 font-light">
                         {sliderContent[currentSlide].subtitle}
                       </h2>
                     </div>
@@ -297,7 +307,7 @@ const LearningPlatform: React.FC = () => {
                           ? 'translate-y-10 opacity-0'
                           : '-translate-y-10 opacity-0'
                       }`}>
-                      <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 mb-8 sm:mb-10 lg:mb-12 max-w-4xl mx-auto leading-relaxed px-4">
+                      <p data-atropos-offset="4" className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 mb-8 sm:mb-10 lg:mb-12 max-w-4xl mx-auto leading-relaxed px-4">
                         {sliderContent[currentSlide].description}
                       </p>
                     </div>
@@ -310,11 +320,11 @@ const LearningPlatform: React.FC = () => {
                           : '-translate-y-10 opacity-0'
                       }`}>
                       <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 px-4">
-                        <button className="group px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl sm:rounded-2xl hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-blue-500/30 font-medium text-base sm:text-lg flex items-center justify-center space-x-3 space-x-reverse backdrop-blur-sm">
+                        <button data-atropos-offset="12" className="group px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl sm:rounded-2xl hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-blue-500/30 font-medium text-base sm:text-lg flex items-center justify-center space-x-3 space-x-reverse backdrop-blur-sm">
                           <FaPlay className="text-sm group-hover:scale-110 transition-transform duration-300" />
                           <span>ابدأ التعلم الآن</span>
                         </button>
-                        <button className="group px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 bg-white/10 text-white border border-white/30 rounded-xl sm:rounded-2xl hover:bg-white/20 backdrop-blur-md transform hover:scale-105 transition-all duration-300 font-medium text-base sm:text-lg flex items-center justify-center space-x-3 space-x-reverse shadow-lg hover:shadow-2xl">
+                        <button data-atropos-offset="10" className="group px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 bg-white/10 text-white border border-white/30 rounded-xl sm:rounded-2xl hover:bg-white/20 backdrop-blur-md transform hover:scale-105 transition-all duration-300 font-medium text-base sm:text-lg flex items-center justify-center space-x-3 space-x-reverse shadow-lg hover:shadow-2xl">
                           <FaSearch className="text-sm group-hover:scale-110 transition-transform duration-300" />
                           <span>تصفح الكورسات</span>
                         </button>
@@ -400,10 +410,10 @@ const LearningPlatform: React.FC = () => {
             <FaPlay className={`${isMobile ? 'text-xs' : 'text-sm'} ml-0.5`} />
           )}
         </button>
-      </section>
+      </motion.section>
 
       {/* قسم الميزات - Responsive */}
-      <section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
+      <motion.section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden" style={{ y: statsParallax }}>
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-purple-50/50"></div>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-12 sm:mb-16 lg:mb-20">
@@ -438,7 +448,7 @@ const LearningPlatform: React.FC = () => {
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* قسم الإحصاءات - Responsive */}
       <section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-500 text-white relative overflow-hidden">
@@ -477,8 +487,8 @@ const LearningPlatform: React.FC = () => {
       </section>
 
       {/* قسم الكورسات - Responsive */}
-      <section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-b from-white to-gray-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <motion.section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-b from-white to-gray-50">
+        <motion.div className="container mx-auto px-4 sm:px-6 lg:px-8" style={{ y: coursesParallax }}>
           <div className="text-center mb-12 sm:mb-16 lg:mb-20">
             <div className="inline-block px-4 sm:px-6 py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full text-blue-600 font-medium mb-4 sm:mb-6 text-sm sm:text-base">
               الكورسات المميزة
@@ -493,18 +503,22 @@ const LearningPlatform: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {courses.map((course, index) => (
-              <div
+              <motion.div
                 key={index}
-                className="group bg-white rounded-2xl lg:rounded-3xl overflow-hidden shadow-xl border border-gray-100 hover:border-blue-200 hover:shadow-2xl hover:-translate-y-2 lg:hover:-translate-y-6 transition-all duration-500 relative"
+                className="group bg-white rounded-2xl lg:rounded-3xl overflow-hidden shadow-xl border border-gray-100 hover:border-blue-200 hover:shadow-2xl transition-all duration-500 relative"
+                initial={{ opacity: 0, y: 40, rotateX: 6 }}
+                whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+                viewport={{ once: true, amount: 0.25 }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
               >
-                <div className="h-40 sm:h-48 lg:h-56 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-400 flex items-center justify-center text-white relative overflow-hidden">
+                <div data-atropos-offset="4" className="h-40 sm:h-48 lg:h-56 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-400 flex items-center justify-center text-white relative overflow-hidden">
                   <div className="absolute inset-0 bg-black/10"></div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                  <div data-atropos-offset="8" className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
 
-                  <div className="bg-white/20 p-6 lg:p-8 rounded-full group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 relative z-10 backdrop-blur-sm shadow-2xl">
+                  <div data-atropos-offset="12" className="bg-white/20 p-6 lg:p-8 rounded-full group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 relative z-10 backdrop-blur-sm shadow-2xl">
                     {course.icon}
                   </div>
-                  <div className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white/20 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium border border-white/30">
+                  <div data-atropos-offset="10" className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white/20 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium border border-white/30">
                     {course.category}
                   </div>
 
@@ -518,27 +532,28 @@ const LearningPlatform: React.FC = () => {
                 </div>
 
                 <div className="p-6 lg:p-8 relative">
-                  <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4 group-hover:text-blue-600 transition-colors duration-300 leading-tight">{course.title}</h3>
-                  <p className="text-sm lg:text-base text-gray-600 mb-4 lg:mb-6 leading-relaxed">{course.description}</p>
+                  <h3 data-atropos-offset="10" className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4 group-hover:text-blue-600 transition-colors duration-300 leading-tight">{course.title}</h3>
+                  <p data-atropos-offset="6" className="text-sm lg:text-base text-gray-600 mb-4 lg:mb-6 leading-relaxed">{course.description}</p>
 
                   <div className="flex items-center justify-between mb-4 lg:mb-6 text-xs sm:text-sm text-gray-500">
-                    <div className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
+                    <div data-atropos-offset="6" className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
                       <FaClock className="text-blue-500" />
                       <span>{course.duration}</span>
                     </div>
-                    <div className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
+                    <div data-atropos-offset="6" className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
                       <FaBookOpen className="text-purple-500" />
                       <span>{course.lessons}</span>
                     </div>
                   </div>
 
-                  <button className="group/btn w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 sm:py-4 rounded-xl lg:rounded-2xl hover:from-blue-700 hover:to-purple-700 font-medium transition-all duration-300 flex items-center justify-center space-x-3 space-x-reverse shadow-lg hover:shadow-xl transform hover:scale-105 relative overflow-hidden text-sm sm:text-base">
+                  <button data-atropos-offset="12" className="group/btn w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 sm:py-4 rounded-xl lg:rounded-2xl hover:from-blue-700 hover:to-purple-700 font-medium transition-all duration-300 flex items-center justify-center space-x-3 space-x-reverse shadow-lg hover:shadow-xl transform hover:scale-105 relative overflow-hidden text-sm sm:text-base">
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
                     <span className="relative z-10">ابدأ الكورس الآن</span>
                     <FaArrowLeft className="text-sm group-hover/btn:-translate-x-1 transition-transform duration-300 relative z-10" />
                   </button>
                 </div>
-              </div>
+                
+              </motion.div>
             ))}
           </div>
 
@@ -548,8 +563,8 @@ const LearningPlatform: React.FC = () => {
               <FaChevronDown className="text-sm group-hover:translate-y-1 transition-transform duration-300" />
             </button>
           </div>
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
 
       {/* قسم دعوة للعمل - Responsive */}
       <section className="py-16 sm:py-24 lg:py-32 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
