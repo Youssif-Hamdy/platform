@@ -20,12 +20,16 @@ import {
   FaTwitter,
   FaInstagram,
   FaYoutube,
-  FaArrowLeft,
   FaPlay,
   FaClock,
-  FaBookOpen,
   FaChevronDown,
   FaChevronRight,
+  FaChevronLeft,
+  FaUser,
+  FaHeart,
+  FaShoppingCart,
+  FaTimes,
+  FaCheck,
   
 } from 'react-icons/fa';
 import Navbar from '../component/Navbar';
@@ -77,12 +81,21 @@ interface StatItem {
 }
 
 interface CourseItem {
-  icon: React.ReactNode;
+  id: number;
   title: string;
   description: string;
-  category: string;
-  duration: string;
-  lessons: string;
+  teacher_name: string;
+  thumbnail: string | null;
+  status: string;
+  difficulty: string;
+  price: string;
+  duration_hours: number;
+  total_sections: number;
+  total_quizzes: number;
+  total_enrollments: number;
+  average_rating: number;
+  created_at: string;
+  updated_at: string;
 }
 
 interface LinkItem {
@@ -101,6 +114,13 @@ const LearningPlatform: React.FC = () => {
   const [slideDirection, setSlideDirection] = useState('next');
   const [isAnimating, setIsAnimating] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [courses, setCourses] = useState<CourseItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<CourseItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const coursesPerPage = 4;
   // Atropos will handle 3D interactions; no manual tilt state needed
 
   // Check if mobile
@@ -111,6 +131,28 @@ const LearningPlatform: React.FC = () => {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Fetch courses from API
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/student/get-all-courses/');
+        if (!response.ok) {
+          throw new Error('Failed to fetch courses');
+        }
+        const data = await response.json();
+        setCourses(data || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'حدث خطأ في تحميل الكورسات');
+        console.error('Error fetching courses:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
   }, []);
 
   // Auto-play slider
@@ -180,32 +222,73 @@ const LearningPlatform: React.FC = () => {
     { number: "98%", label: "رضى العملاء" }
   ];
 
-  const courses: CourseItem[] = [
-    {
-      icon: <FaLaptopCode className="text-xl lg:text-2xl" />,
-      title: "برمجة الويب المتقدمة",
-      description: "تعلم أحدث تقنيات تطوير الويب مثل React وNode.js",
-      category: "تطوير الويب",
-      duration: "12 ساعة",
-      lessons: "45 درس"
-    },
-    {
-      icon: <FaChartLine className="text-xl lg:text-2xl" />,
-      title: "تحليل البيانات",
-      description: "أساسيات تحليل البيانات باستخدام Python وPandas",
-      category: "علوم البيانات",
-      duration: "8 ساعات",
-      lessons: "30 درس"
-    },
-    {
-      icon: <FaLanguage className="text-xl lg:text-2xl" />,
-      title: "الإنجليزية للأعمال",
-      description: "تحسين مهارات التواصل باللغة الإنجليزية في بيئة العمل",
-      category: "اللغات",
-      duration: "15 ساعة",
-      lessons: "60 درس"
+  // Helper function to get category icon based on title
+  const getCategoryIcon = (title: string) => {
+    const titleLower = title.toLowerCase();
+    if (titleLower.includes('web') || titleLower.includes('angular') || titleLower.includes('react') || titleLower.includes('javascript')) {
+      return <FaLaptopCode className="text-xl lg:text-2xl" />;
+    } else if (titleLower.includes('data') || titleLower.includes('python') || titleLower.includes('analysis')) {
+      return <FaChartLine className="text-xl lg:text-2xl" />;
+    } else if (titleLower.includes('language') || titleLower.includes('english') || titleLower.includes('arabic')) {
+      return <FaLanguage className="text-xl lg:text-2xl" />;
+    } else {
+      return <FaBook className="text-xl lg:text-2xl" />;
     }
-  ];
+  };
+
+  // Helper function to get difficulty color
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty.toLowerCase()) {
+      case 'beginner':
+        return 'bg-green-100 text-green-800';
+      case 'intermediate':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'advanced':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-blue-100 text-blue-800';
+    }
+  };
+
+  // Helper function to format price
+  const formatPrice = (price: string) => {
+    const priceNum = parseFloat(price);
+    return priceNum === 0 ? 'مجاني' : `${priceNum} ج.م`;
+  };
+
+  // Helper function to format duration
+  const formatDuration = (hours: number) => {
+    if (hours < 1) {
+      return `${Math.round(hours * 60)} دقيقة`;
+    } else if (hours === 1) {
+      return 'ساعة واحدة';
+    } else {
+      return `${hours} ساعات`;
+    }
+  };
+
+  // Navigation functions
+  const nextPage = () => {
+    const maxPage = Math.ceil(courses.length / coursesPerPage) - 1;
+    setCurrentPage(prev => prev < maxPage ? prev + 1 : 0);
+  };
+
+  const prevPage = () => {
+    const maxPage = Math.ceil(courses.length / coursesPerPage) - 1;
+    setCurrentPage(prev => prev > 0 ? prev - 1 : maxPage);
+  };
+
+  // Modal functions
+  const openModal = (course: CourseItem) => {
+    setSelectedCourse(course);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedCourse(null);
+  };
+
 
   const footerColumns: FooterColumn[] = [
     {
@@ -282,7 +365,7 @@ const LearningPlatform: React.FC = () => {
                           : '-translate-y-10 opacity-0'
                       }`}>
                       <h1 data-atropos-offset="8" className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-8xl font-bold text-white mb-4 sm:mb-6 leading-tight">
-                        <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-purple-400 bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-blue-500 bg-clip-text text-transparent">
                           {sliderContent[currentSlide].title}
                         </span>
                       </h1>
@@ -379,7 +462,7 @@ const LearningPlatform: React.FC = () => {
         {/* Progress Bar - Blue theme */}
         <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
           <div
-            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-5000 ease-linear"
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-700 transition-all duration-5000 ease-linear"
             style={{
               width: isAutoPlaying ? '100%' : '0%',
               animation: isAutoPlaying ? 'progress 5s linear infinite' : 'none'
@@ -391,7 +474,7 @@ const LearningPlatform: React.FC = () => {
         {!isMobile && (
           <>
             <div className="absolute top-20 right-10 w-20 h-20 bg-blue-500/20 rounded-full animate-bounce opacity-60"></div>
-            <div className="absolute bottom-32 left-16 w-16 h-16 bg-purple-400/20 rounded-full animate-pulse opacity-60"></div>
+            <div className="absolute bottom-32 left-16 w-16 h-16 bg-blue-400/20 rounded-full animate-pulse opacity-60"></div>
             <div className="absolute top-1/2 left-10 w-12 h-12 bg-white/10 rounded-full animate-ping opacity-60"></div>
             <div className="absolute top-1/4 right-1/4 w-8 h-8 bg-blue-300/30 rounded-full animate-bounce delay-1000 opacity-60"></div>
           </>
@@ -413,15 +496,15 @@ const LearningPlatform: React.FC = () => {
       </motion.section>
 
       {/* قسم الميزات - Responsive */}
-      <motion.section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden" style={{ y: statsParallax }}>
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-purple-50/50"></div>
+      <motion.section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-b from-white to-blue-50 relative overflow-hidden" style={{ y: statsParallax }}>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-blue-100/30"></div>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-12 sm:mb-16 lg:mb-20">
-            <div className="inline-block px-4 sm:px-6 py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full text-blue-600 font-medium mb-4 sm:mb-6 text-sm sm:text-base">
+            <div className="inline-block px-4 sm:px-6 py-2 bg-blue-100 rounded-full text-blue-600 font-medium mb-4 sm:mb-6 text-sm sm:text-base">
               لماذا نحن مختلفون؟
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 px-4">
-              لماذا تختار <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">منصة تعلم</span>؟
+              لماذا تختار <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">منصة تعلم</span>؟
             </h2>
             <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed px-4">
               نقدم لك تجربة تعليمية فريدة تجمع بين الجودة والمرونة والتفاعل
@@ -435,10 +518,10 @@ const LearningPlatform: React.FC = () => {
                 className="group bg-white rounded-2xl lg:rounded-3xl p-6 lg:p-8 shadow-xl border border-gray-100 hover:border-blue-200 hover:shadow-2xl hover:-translate-y-2 lg:hover:-translate-y-6 transition-all duration-500 relative overflow-hidden"
               >
                 {/* Background Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-blue-100/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
                 <div className="relative z-10">
-                  <div className="bg-gradient-to-r from-blue-500 to-purple-500 w-16 h-16 lg:w-20 lg:h-20 rounded-2xl lg:rounded-3xl flex items-center justify-center mb-4 lg:mb-6 mx-auto text-white group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-lg group-hover:shadow-2xl">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 w-16 h-16 lg:w-20 lg:h-20 rounded-2xl lg:rounded-3xl flex items-center justify-center mb-4 lg:mb-6 mx-auto text-white group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-lg group-hover:shadow-2xl">
                     {feature.icon}
                   </div>
                   <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4 text-center group-hover:text-blue-600 transition-colors duration-300">{feature.title}</h3>
@@ -451,7 +534,7 @@ const LearningPlatform: React.FC = () => {
       </motion.section>
 
       {/* قسم الإحصاءات - Responsive */}
-      <section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-500 text-white relative overflow-hidden">
+      <section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 text-white relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent"></div>
@@ -475,7 +558,7 @@ const LearningPlatform: React.FC = () => {
               <div key={index} className="p-4 sm:p-6 lg:p-8 group relative">
                 <div className="absolute inset-0 bg-white/10 rounded-2xl lg:rounded-3xl backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-105"></div>
                 <div className="relative z-10">
-                  <p className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-2 sm:mb-3 lg:mb-4 group-hover:scale-110 transition-transform duration-300 bg-gradient-to-r from-white to-blue-100 bg-clip-text">
+                  <p className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mb-2 sm:mb-3 lg:mb-4 group-hover:scale-110 transition-transform duration-300 bg-gradient-to-r from-white to-blue-200 bg-clip-text">
                     {stat.number}
                   </p>
                   <p className="text-sm sm:text-base lg:text-xl opacity-90 font-medium">{stat.label}</p>
@@ -486,91 +569,168 @@ const LearningPlatform: React.FC = () => {
         </div>
       </section>
 
-      {/* قسم الكورسات - Responsive */}
-      <motion.section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-b from-white to-gray-50">
-        <motion.div className="container mx-auto px-4 sm:px-6 lg:px-8" style={{ y: coursesParallax }}>
+      {/* قسم الكورسات - سكشن منفصل مع تصميم محسن */}
+      <motion.section className="py-16 sm:py-20 lg:py-24 bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-white/50"></div>
+        <motion.div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10" style={{ y: coursesParallax }}>
           <div className="text-center mb-12 sm:mb-16 lg:mb-20">
-            <div className="inline-block px-4 sm:px-6 py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full text-blue-600 font-medium mb-4 sm:mb-6 text-sm sm:text-base">
-              الكورسات المميزة
+            <div className="inline-block px-6 py-3 bg-blue-100 rounded-full text-blue-600 font-semibold mb-6 text-sm sm:text-base shadow-sm">
+              🎓 الكورسات المتاحة
             </div>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 px-4">
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">الكورسات</span> الأكثر شهرة
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 px-4">
+              <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">اكتشف</span> أفضل الكورسات
             </h2>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed px-4">
-              اكتشف أفضل الكورسات التي يوصي بها طلابنا والخبراء في المجال
+            <p className="text-lg sm:text-xl lg:text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed px-4">
+              تعلم من أفضل الخبراء وطور مهاراتك مع كورسات عالية الجودة
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {courses.map((course, index) => (
-              <motion.div
-                key={index}
-                className="group bg-white rounded-2xl lg:rounded-3xl overflow-hidden shadow-xl border border-gray-100 hover:border-blue-200 hover:shadow-2xl transition-all duration-500 relative"
-                initial={{ opacity: 0, y: 40, rotateX: 6 }}
-                whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
+          {loading ? (
+            <div className="flex flex-col justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mb-6"></div>
+              <p className="text-gray-600 text-xl font-medium">جاري تحميل الكورسات...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-20">
+              <div className="text-red-600 text-xl mb-6 font-medium">{error}</div>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-lg hover:shadow-xl"
               >
-                <div data-atropos-offset="4" className="h-40 sm:h-48 lg:h-56 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-400 flex items-center justify-center text-white relative overflow-hidden">
-                  <div className="absolute inset-0 bg-black/10"></div>
-                  <div data-atropos-offset="8" className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-
-                  <div data-atropos-offset="12" className="bg-white/20 p-6 lg:p-8 rounded-full group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 relative z-10 backdrop-blur-sm shadow-2xl">
-                    {course.icon}
-                  </div>
-                  <div data-atropos-offset="10" className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white/20 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium border border-white/30">
-                    {course.category}
-                  </div>
-
-                  {/* Floating particles - Hidden on mobile */}
-                  {!isMobile && (
-                    <>
-                      <div className="absolute top-6 left-6 w-3 h-3 bg-white/30 rounded-full animate-bounce"></div>
-                      <div className="absolute bottom-8 right-8 w-2 h-2 bg-white/40 rounded-full animate-pulse"></div>
-                    </>
-                  )}
-                </div>
-
-                <div className="p-6 lg:p-8 relative">
-                  <h3 data-atropos-offset="10" className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4 group-hover:text-blue-600 transition-colors duration-300 leading-tight">{course.title}</h3>
-                  <p data-atropos-offset="6" className="text-sm lg:text-base text-gray-600 mb-4 lg:mb-6 leading-relaxed">{course.description}</p>
-
-                  <div className="flex items-center justify-between mb-4 lg:mb-6 text-xs sm:text-sm text-gray-500">
-                    <div data-atropos-offset="6" className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
-                      <FaClock className="text-blue-500" />
-                      <span>{course.duration}</span>
-                    </div>
-                    <div data-atropos-offset="6" className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
-                      <FaBookOpen className="text-purple-500" />
-                      <span>{course.lessons}</span>
-                    </div>
-                  </div>
-
-                  <button data-atropos-offset="12" className="group/btn w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 sm:py-4 rounded-xl lg:rounded-2xl hover:from-blue-700 hover:to-purple-700 font-medium transition-all duration-300 flex items-center justify-center space-x-3 space-x-reverse shadow-lg hover:shadow-xl transform hover:scale-105 relative overflow-hidden text-sm sm:text-base">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
-                    <span className="relative z-10">ابدأ الكورس الآن</span>
-                    <FaArrowLeft className="text-sm group-hover/btn:-translate-x-1 transition-transform duration-300 relative z-10" />
+                إعادة المحاولة
+              </button>
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="text-center py-20">
+              <div className="text-gray-500 text-xl mb-4 font-medium">لا توجد كورسات متاحة حالياً</div>
+              <p className="text-gray-400 text-lg">تحقق مرة أخرى لاحقاً للاطلاع على الكورسات الجديدة</p>
+            </div>
+          ) : (
+            <div className="relative">
+              {/* Navigation Arrows - Udemy Style */}
+              {courses.length > coursesPerPage && (
+                <>
+                  <button
+                    onClick={prevPage}
+                    className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-6 z-10 w-10 h-10 bg-white rounded-full shadow-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:text-blue-600 hover:border-blue-300 transition-all duration-200 hover:shadow-xl"
+                  >
+                    <FaChevronRight className="text-sm" />
                   </button>
-                </div>
-                
-              </motion.div>
-            ))}
-          </div>
+                  <button
+                    onClick={nextPage}
+                    className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-6 z-10 w-10 h-10 bg-white rounded-full shadow-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:text-blue-600 hover:border-blue-300 transition-all duration-200 hover:shadow-xl"
+                  >
+                    <FaChevronLeft className="text-sm" />
+                  </button>
+                </>
+              )}
 
-          <div className="text-center mt-12 lg:mt-16">
-            <button className="group px-8 sm:px-10 py-3 sm:py-4 bg-gradient-to-r from-gray-100 to-gray-50 text-gray-700 rounded-xl lg:rounded-2xl hover:from-blue-50 hover:to-purple-50 hover:text-blue-600 font-medium transition-all duration-300 flex items-center justify-center mx-auto space-x-3 space-x-reverse shadow-lg hover:shadow-xl transform hover:scale-105 border border-gray-200 hover:border-blue-200 text-sm sm:text-base">
-              <span>عرض جميع الكورسات</span>
-              <FaChevronDown className="text-sm group-hover:translate-y-1 transition-transform duration-300" />
-            </button>
-          </div>
+              {/* Courses Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                {courses.slice(currentPage * coursesPerPage, (currentPage + 1) * coursesPerPage).map((course, index) => (
+                  <motion.div
+                    key={course.id}
+                    className="group bg-white rounded-xl overflow-hidden shadow-md border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300 relative cursor-pointer"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: 'easeOut', delay: index * 0.1 }}
+                    whileHover={{ y: -5 }}
+                    onClick={() => openModal(course)}
+                  >
+                    {/* Course Thumbnail */}
+                    <div className="relative h-40 bg-gradient-to-br from-blue-500 to-blue-600 overflow-hidden">
+                      {course.thumbnail ? (
+                        <img 
+                          src={course.thumbnail} 
+                          alt={course.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white">
+                          <div className="bg-white/20 p-6 rounded-full group-hover:scale-110 transition-all duration-300">
+                            {getCategoryIcon(course.title)}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Play Button Overlay */}
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <button className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-blue-600 hover:bg-white transition-all duration-300">
+                          <FaPlay className="text-sm ml-0.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-4">
+                      {/* Course Title */}
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-300 line-clamp-2">
+                        {course.title}
+                      </h3>
+                      
+                      {/* Instructor */}
+                      <div className="flex items-center mb-3 text-sm text-gray-600">
+                        <FaUser className="text-blue-500 ml-1" />
+                        <span>{course.teacher_name}</span>
+                      </div>
+
+                      {/* Price and Action */}
+                      <div className="flex items-center justify-between">
+                        <div className="text-xl font-bold text-blue-600">
+                          {formatPrice(course.price)}
+                        </div>
+                        <button 
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center space-x-1 space-x-reverse"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Enroll logic here
+                          }}
+                        >
+                          <FaShoppingCart className="text-xs" />
+                          <span>اشترك الآن</span>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Page Indicators */}
+              {courses.length > coursesPerPage && (
+                <div className="flex justify-center mt-8">
+                  <div className="flex items-center justify-center bg-white rounded-full px-6 py-3 shadow-lg border border-gray-200">
+                    {Array.from({ length: Math.ceil(courses.length / coursesPerPage) }).map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentPage(index)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                          index === currentPage 
+                            ? 'bg-blue-600 scale-125 shadow-md' 
+                            : 'bg-gray-300 hover:bg-blue-400 hover:scale-110'
+                        } ${index > 0 ? 'mr-4' : ''}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!loading && !error && courses.length > coursesPerPage && (
+            <div className="text-center mt-16">
+              <button className="group px-10 py-4 bg-white text-blue-600 rounded-2xl border-2 border-blue-600 hover:bg-blue-600 hover:text-white font-bold transition-all duration-300 flex items-center justify-center mx-auto space-x-3 space-x-reverse shadow-xl hover:shadow-2xl transform hover:scale-105 text-lg">
+                <span>عرض جميع الكورسات</span>
+                <FaChevronDown className="text-lg group-hover:translate-y-1 transition-transform duration-300" />
+              </button>
+            </div>
+          )}
         </motion.div>
       </motion.section>
 
       {/* قسم دعوة للعمل - Responsive */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-purple-50/30"></div>
+      <section className="py-16 sm:py-24 lg:py-32 bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-blue-100/30"></div>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-500 rounded-2xl lg:rounded-3xl p-8 sm:p-12 lg:p-16 text-center relative overflow-hidden shadow-2xl">
+          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-2xl lg:rounded-3xl p-8 sm:p-12 lg:p-16 text-center relative overflow-hidden shadow-2xl">
             {/* Background Pattern - Hidden on mobile for performance */}
             {!isMobile && (
               <div className="absolute inset-0 opacity-10">
@@ -628,10 +788,10 @@ const LearningPlatform: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 lg:gap-12">
             <div className="sm:col-span-2 lg:col-span-1">
               <div className="flex items-center space-x-3 space-x-reverse mb-6 sm:mb-8">
-                <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl lg:rounded-2xl shadow-lg">
+                <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl lg:rounded-2xl shadow-lg">
                   <FaGraduationCap className="text-white text-xl sm:text-2xl" />
                 </div>
-                <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 to-blue-500 bg-clip-text text-transparent">
                   تعلم
                 </span>
               </div>
@@ -660,7 +820,7 @@ const LearningPlatform: React.FC = () => {
               <div key={index} className="sm:col-span-1">
                 <h4 className="text-lg sm:text-xl font-bold mb-6 sm:mb-8 text-white relative">
                   {column.title}
-                  <div className="absolute bottom-0 left-0 w-12 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                  <div className="absolute bottom-0 left-0 w-12 h-1 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"></div>
                 </h4>
                 <ul className="space-y-3 sm:space-y-4">
                   {column.links.map((link, i) => (
@@ -693,6 +853,149 @@ const LearningPlatform: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Course Details Modal */}
+      {isModalOpen && selectedCourse && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            initial={{ opacity: 0, scale: 0.9, y: 50 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 50 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            {/* Modal Header */}
+            <div className="relative">
+              <div className="h-64 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 relative overflow-hidden">
+                {selectedCourse.thumbnail ? (
+                  <img 
+                    src={selectedCourse.thumbnail} 
+                    alt={selectedCourse.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white">
+                    <div className="bg-white/20 p-12 rounded-full backdrop-blur-sm shadow-2xl">
+                      {getCategoryIcon(selectedCourse.title)}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Close Button */}
+                <button
+                  onClick={closeModal}
+                  className="absolute top-4 right-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition-colors hover:scale-110"
+                >
+                  <FaTimes className="text-lg" />
+                </button>
+                
+                {/* Difficulty Badge */}
+                <div className={`absolute top-4 left-4 px-3 py-1.5 rounded-full text-sm font-bold ${getDifficultyColor(selectedCourse.difficulty)} shadow-lg`}>
+                  {selectedCourse.difficulty === 'beginner' ? 'مبتدئ' : 
+                   selectedCourse.difficulty === 'intermediate' ? 'متوسط' : 
+                   selectedCourse.difficulty === 'advanced' ? 'متقدم' : selectedCourse.difficulty}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-8">
+              {/* Course Title and Instructor */}
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold text-gray-900 mb-3">{selectedCourse.title}</h2>
+                <div className="flex items-center text-gray-600 mb-4">
+                  <FaUser className="text-blue-500 ml-2" />
+                  <span className="text-lg font-medium">{selectedCourse.teacher_name}</span>
+                </div>
+                <p className="text-gray-600 text-lg leading-relaxed">{selectedCourse.description}</p>
+              </div>
+
+              {/* Course Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div className="bg-blue-50 p-4 rounded-xl text-center">
+                  <FaStar className="text-yellow-400 text-2xl mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-gray-900">{selectedCourse.average_rating > 0 ? selectedCourse.average_rating.toFixed(1) : 'جديد'}</div>
+                  <div className="text-sm text-gray-600">التقييم</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-xl text-center">
+                  <FaUsers className="text-green-500 text-2xl mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-gray-900">{selectedCourse.total_enrollments}</div>
+                  <div className="text-sm text-gray-600">الطلاب</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-xl text-center">
+                  <FaClock className="text-purple-500 text-2xl mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-gray-900">{formatDuration(selectedCourse.duration_hours)}</div>
+                  <div className="text-sm text-gray-600">المدة</div>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-xl text-center">
+                  <FaBook className="text-orange-500 text-2xl mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-gray-900">{selectedCourse.total_sections}</div>
+                  <div className="text-sm text-gray-600">الأقسام</div>
+                </div>
+              </div>
+
+              {/* Course Details */}
+              <div className="grid md:grid-cols-2 gap-8 mb-8">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">تفاصيل الكورس</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">عدد الأقسام:</span>
+                      <span className="font-medium">{selectedCourse.total_sections}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">عدد الاختبارات:</span>
+                      <span className="font-medium">{selectedCourse.total_quizzes}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">المدة الإجمالية:</span>
+                      <span className="font-medium">{formatDuration(selectedCourse.duration_hours)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600">تاريخ الإنشاء:</span>
+                      <span className="font-medium">{new Date(selectedCourse.created_at).toLocaleDateString('ar-EG')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">مميزات الكورس</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center text-green-600">
+                      <FaCheck className="ml-2" />
+                      <span>شهادة إتمام</span>
+                    </div>
+                    <div className="flex items-center text-green-600">
+                      <FaCheck className="ml-2" />
+                      <span>وصول مدى الحياة</span>
+                    </div>
+                    <div className="flex items-center text-green-600">
+                      <FaCheck className="ml-2" />
+                      <span>دعم فني متاح</span>
+                    </div>
+                    <div className="flex items-center text-green-600">
+                      <FaCheck className="ml-2" />
+                      <span>مواد قابلة للتحميل</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button className="flex-1 bg-blue-600 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-3 space-x-reverse shadow-lg hover:shadow-xl">
+                  <FaShoppingCart className="text-xl" />
+                  <span>اشترك الآن - {formatPrice(selectedCourse.price)}</span>
+                </button>
+                <button className="flex-1 bg-white text-blue-600 border-2 border-blue-600 py-4 px-8 rounded-xl font-bold text-lg hover:bg-blue-50 transition-colors flex items-center justify-center space-x-3 space-x-reverse">
+                  <FaHeart className="text-xl" />
+                  <span>أضف للمفضلة</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* تم إزالة styled-jsx */}
     </div>

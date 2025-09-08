@@ -190,6 +190,24 @@ const Navbar = () => {
     setActiveLink(linkName);
     setIsMenuOpen(false);
     document.body.style.overflow = 'auto'; // إعادة تمكين التمرير
+    
+    // Scroll to section if it exists
+    if (linkName === 'من نحن') {
+      const aboutSection = document.getElementById('about');
+      if (aboutSection) {
+        aboutSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (linkName === 'الخدمات') {
+      const servicesSection = document.getElementById('services');
+      if (servicesSection) {
+        servicesSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (linkName === 'الدورات') {
+      const coursesSection = document.getElementById('courses');
+      if (coursesSection) {
+        coursesSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   };
 
   return (
@@ -256,64 +274,76 @@ const Navbar = () => {
               <div className="w-1 h-1 bg-current rounded-full"></div>
             </li>
             <li>
-              <NavLink
-                to="/about"
-                className={({ isActive }) =>
-                  `text-sm flex items-center transition-all duration-300 hover:scale-105 ${
-                    isScrolled 
-                      ? (isActive ? 'text-blue-600 font-bold' : 'text-gray-700 hover:text-blue-600')
-                      : (isActive ? 'text-white font-bold' : 'text-white/90 hover:text-white')
-                  }`
-                }
-                onClick={() => handleLinkClick('من نحن')}
+              <button
+                className={`text-sm flex items-center transition-all duration-300 hover:scale-105 ${
+                  isScrolled 
+                    ? 'text-gray-700 hover:text-blue-600'
+                    : 'text-white/90 hover:text-white'
+                }`}
+                onClick={() => {
+                  if (window.location.pathname === '/') {
+                    handleLinkClick('من نحن');
+                  } else {
+                    window.location.href = '/';
+                    setTimeout(() => handleLinkClick('من نحن'), 100);
+                  }
+                }}
               >
                 <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 من نحن
-              </NavLink>
+              </button>
             </li>
             <li className="text-gray-300">
               <div className="w-1 h-1 bg-current rounded-full"></div>
             </li>
             <li>
-              <NavLink
-                to="/courses"
-                className={({ isActive }) =>
-                  `text-sm flex items-center transition-all duration-300 hover:scale-105 ${
-                    isScrolled 
-                      ? (isActive ? 'text-blue-600 font-bold' : 'text-gray-700 hover:text-blue-600')
-                      : (isActive ? 'text-white font-bold' : 'text-white/90 hover:text-white')
-                  }`
-                }
-                onClick={() => handleLinkClick('الدورات')}
+              <button
+                className={`text-sm flex items-center transition-all duration-300 hover:scale-105 ${
+                  isScrolled 
+                    ? 'text-gray-700 hover:text-blue-600'
+                    : 'text-white/90 hover:text-white'
+                }`}
+                onClick={() => {
+                  if (window.location.pathname === '/') {
+                    handleLinkClick('الدورات');
+                  } else {
+                    window.location.href = '/';
+                    setTimeout(() => handleLinkClick('الدورات'), 100);
+                  }
+                }}
               >
                 <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
                 الدورات
-              </NavLink>
+              </button>
             </li>
             <li className="text-gray-300">
               <div className="w-1 h-1 bg-current rounded-full"></div>
             </li>
             <li>
-              <NavLink
-                to="/services"
-                className={({ isActive }) =>
-                  `text-sm flex items-center transition-all duration-300 hover:scale-105 ${
-                    isScrolled 
-                      ? (isActive ? 'text-blue-600 font-bold' : 'text-gray-700 hover:text-blue-600')
-                      : (isActive ? 'text-white font-bold' : 'text-white/90 hover:text-white')
-                  }`
-                }
-                onClick={() => handleLinkClick('الخدمات')}
+              <button
+                className={`text-sm flex items-center transition-all duration-300 hover:scale-105 ${
+                  isScrolled 
+                    ? 'text-gray-700 hover:text-blue-600'
+                    : 'text-white/90 hover:text-white'
+                }`}
+                onClick={() => {
+                  if (window.location.pathname === '/') {
+                    handleLinkClick('الخدمات');
+                  } else {
+                    window.location.href = '/';
+                    setTimeout(() => handleLinkClick('الخدمات'), 100);
+                  }
+                }}
               >
                 <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
                 </svg>
                 الخدمات
-              </NavLink>
+              </button>
             </li>
             {/* أيقونة السلة */}
             <li>
@@ -437,58 +467,58 @@ const Navbar = () => {
                   </NavLink>
                 </li>
                 <li>
-                  <NavLink
-                    to="/about"
-                    className={({ isActive }) =>
-                      `flex items-center p-4 rounded-xl transition-all duration-300 ${
-                        isActive 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg' 
-                          : 'text-blue-800 hover:bg-blue-100'
-                      }`
-                    }
-                    onClick={() => handleLinkClick('من نحن')}
+                  <button
+                    className="flex items-center p-4 rounded-xl transition-all duration-300 text-blue-800 hover:bg-blue-100 w-full text-right"
+                    onClick={() => {
+                      if (window.location.pathname === '/') {
+                        handleLinkClick('من نحن');
+                      } else {
+                        window.location.href = '/';
+                        setTimeout(() => handleLinkClick('من نحن'), 100);
+                      }
+                    }}
                   >
                     <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     من نحن
-                  </NavLink>
+                  </button>
                 </li>
                 <li>
-                  <NavLink
-                    to="/courses"
-                    className={({ isActive }) =>
-                      `flex items-center p-4 rounded-xl transition-all duration-300 ${
-                        isActive 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg' 
-                          : 'text-blue-800 hover:bg-blue-100'
-                      }`
-                    }
-                    onClick={() => handleLinkClick('الدورات')}
+                  <button
+                    className="flex items-center p-4 rounded-xl transition-all duration-300 text-blue-800 hover:bg-blue-100 w-full text-right"
+                    onClick={() => {
+                      if (window.location.pathname === '/') {
+                        handleLinkClick('الدورات');
+                      } else {
+                        window.location.href = '/';
+                        setTimeout(() => handleLinkClick('الدورات'), 100);
+                      }
+                    }}
                   >
                     <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                     الدورات
-                  </NavLink>
+                  </button>
                 </li>
                 <li>
-                  <NavLink
-                    to="/services"
-                    className={({ isActive }) =>
-                      `flex items-center p-4 rounded-xl transition-all duration-300 ${
-                        isActive 
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg' 
-                          : 'text-blue-800 hover:bg-blue-100'
-                      }`
-                    }
-                    onClick={() => handleLinkClick('الخدمات')}
+                  <button
+                    className="flex items-center p-4 rounded-xl transition-all duration-300 text-blue-800 hover:bg-blue-100 w-full text-right"
+                    onClick={() => {
+                      if (window.location.pathname === '/') {
+                        handleLinkClick('الخدمات');
+                      } else {
+                        window.location.href = '/';
+                        setTimeout(() => handleLinkClick('الخدمات'), 100);
+                      }
+                    }}
                   >
                     <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
                     </svg>
                     الخدمات
-                  </NavLink>
+                  </button>
                 </li>
                 <li>
                   <NavLink

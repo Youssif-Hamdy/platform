@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { GraduationCap, Clock, Users, Star, Play, Download, FileText, HelpCircle, CheckCircle, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GraduationCap, Clock, Users, Star, CheckCircle, AlertCircle, X, Check, Info } from 'lucide-react';
 
 interface Course {
   id: number;
@@ -15,11 +15,140 @@ interface Course {
   is_enrolled?: boolean;
 }
 
+interface Toast {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  title: string;
+  message: string;
+}
+
+// مكون Toast
+const ToastContainer: React.FC<{ toasts: Toast[]; removeToast: (id: string) => void }> = ({ toasts, removeToast }) => {
+  const getToastIcon = (type: string) => {
+    switch (type) {
+      case 'success':
+        return <Check className="w-5 h-5" />;
+      case 'error':
+        return <AlertCircle className="w-5 h-5" />;
+      case 'warning':
+        return <AlertCircle className="w-5 h-5" />;
+      case 'info':
+      default:
+        return <Info className="w-5 h-5" />;
+    }
+  };
+
+  const getToastColors = (type: string) => {
+    switch (type) {
+      case 'success':
+        return {
+          bg: 'bg-green-50 border-green-200',
+          icon: 'text-green-600',
+          title: 'text-green-800',
+          message: 'text-green-700',
+          progress: 'bg-green-500'
+        };
+      case 'error':
+        return {
+          bg: 'bg-red-50 border-red-200',
+          icon: 'text-red-600',
+          title: 'text-red-800',
+          message: 'text-red-700',
+          progress: 'bg-red-500'
+        };
+      case 'warning':
+        return {
+          bg: 'bg-yellow-50 border-yellow-200',
+          icon: 'text-yellow-600',
+          title: 'text-yellow-800',
+          message: 'text-yellow-700',
+          progress: 'bg-yellow-500'
+        };
+      case 'info':
+      default:
+        return {
+          bg: 'bg-blue-50 border-blue-200',
+          icon: 'text-blue-600',
+          title: 'text-blue-800',
+          message: 'text-blue-700',
+          progress: 'bg-blue-500'
+        };
+    }
+  };
+
+  return (
+    <div className="fixed top-8 right-4 z-50 space-y-2 max-w-sm">
+      <AnimatePresence>
+        {toasts.map((toast) => {
+          const colors = getToastColors(toast.type);
+          return (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: -100, scale: 0.8 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: -100, scale: 0.8 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={`relative overflow-hidden rounded-xl border ${colors.bg} backdrop-blur-sm shadow-lg`}
+            >
+              {/* شريط التقدم */}
+              <motion.div
+                initial={{ width: "100%" }}
+                animate={{ width: "0%" }}
+                transition={{ duration: 5, ease: "linear" }}
+                className={`absolute top-0 left-0 h-1 ${colors.progress}`}
+                onAnimationComplete={() => removeToast(toast.id)}
+              />
+              
+              <div className="p-4 pr-10">
+                <div className="flex items-start gap-3">
+                  <div className={`flex-shrink-0 ${colors.icon}`}>
+                    {getToastIcon(toast.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className={`text-sm font-semibold ${colors.title} mb-1`}>
+                      {toast.title}
+                    </h4>
+                    <p className={`text-sm ${colors.message}`}>
+                      {toast.message}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* زر الإغلاق */}
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="absolute top-2 left-2 p-1 rounded-lg hover:bg-black/5 transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-500" />
+            </button>
+
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 const StudentCoursesPage: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [enrolling, setEnrolling] = useState<number | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // دالة إضافة Toast
+  const addToast = (type: Toast['type'], title: string, message: string) => {
+    const id = Date.now().toString();
+    const newToast: Toast = { id, type, title, message };
+    setToasts(prev => [...prev, newToast]);
+  };
+
+  // دالة إزالة Toast
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   const authFetch = async (url: string, init?: RequestInit) => {
     const token = localStorage.getItem('accessToken');
@@ -79,14 +208,17 @@ const StudentCoursesPage: React.FC = () => {
       
       if (!res || !res.ok) {
         setError('تعذر تحميل الكورسات');
+        addToast('error', 'خطأ في التحميل', 'تعذر تحميل الكورسات، يرجى المحاولة مرة أخرى');
         return;
       }
       
       const data = await res.json();
       setCourses(data.results || data || []);
+      addToast('success', 'تم بنجاح', 'تم تحميل الكورسات بنجاح');
     } catch (e) {
       console.error('Error loading courses:', e);
       setError('حدث خطأ أثناء تحميل الكورسات');
+      addToast('error', 'خطأ في الشبكة', 'حدث خطأ أثناء تحميل الكورسات');
     } finally {
       setLoading(false);
     }
@@ -95,6 +227,10 @@ const StudentCoursesPage: React.FC = () => {
   const enrollInCourse = async (courseId: number) => {
     try {
       setEnrolling(courseId);
+      
+      // البحث عن اسم الكورس
+      const course = courses.find(c => c.id === courseId);
+      const courseName = course?.title || 'الكورس';
       
       const res = await authFetch(`/student/enroll/temporary/${courseId}/`, {
         method: 'POST'
@@ -112,10 +248,11 @@ const StudentCoursesPage: React.FC = () => {
       ));
       
       // إظهار رسالة نجاح
-      alert('تم الاشتراك في الكورس بنجاح!');
+      addToast('success', 'تم الاشتراك بنجاح! 🎉', `تم اشتراكك في "${courseName}" بنجاح. يمكنك الآن الوصول لجميع محتويات الكورس`);
+      
     } catch (e) {
       console.error('Error enrolling:', e);
-      alert('حدث خطأ أثناء الاشتراك في الكورس');
+      addToast('error', 'فشل في الاشتراك', 'حدث خطأ أثناء الاشتراك في الكورس، يرجى المحاولة مرة أخرى');
     } finally {
       setEnrolling(null);
     }
@@ -153,127 +290,129 @@ const StudentCoursesPage: React.FC = () => {
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }} 
-      animate={{ opacity: 1, y: 0 }} 
-      transition={{ duration: 0.5 }}
-    >
-      <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">مشاهدة الكورسات</h1>
-        <p className="text-gray-600">استكشف جميع الكورسات المتاحة واشترك في ما يناسبك</p>
-      </div>
+    <>
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       
-      {courses.length === 0 ? (
-        <div className="text-center py-12">
-          <GraduationCap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">لا توجد كورسات متاحة</h3>
-          <p className="text-gray-600">لم يتم العثور على أي كورسات في الوقت الحالي</p>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ duration: 0.5 }}
+      >
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">مشاهدة الكورسات</h1>
+          <p className="text-gray-600">استكشف جميع الكورسات المتاحة واشترك في ما يناسبك</p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses.map((course) => (
-            <motion.div
-              key={course.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: course.id * 0.1 }}
-              className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <div className="h-48 bg-gradient-to-br from-blue-100 to-indigo-100 relative">
-                {course.image ? (
-                  <img
-                    src={course.image}
-                    alt={course.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <GraduationCap className="w-16 h-16 text-blue-400" />
+        
+        {courses.length === 0 ? (
+          <div className="text-center py-12">
+            <GraduationCap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">لا توجد كورسات متاحة</h3>
+            <p className="text-gray-600">لم يتم العثور على أي كورسات في الوقت الحالي</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {courses.map((course) => (
+              <motion.div
+                key={course.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: course.id * 0.1 }}
+                className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow"
+              >
+                <div className="h-48 bg-gradient-to-br from-blue-100 to-indigo-100 relative">
+                  {course.image ? (
+                    <img
+                      src={course.image}
+                      alt={course.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <GraduationCap className="w-16 h-16 text-blue-400" />
+                    </div>
+                  )}
+                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 text-xs font-medium text-gray-700 flex items-center gap-1">
+                    <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                    {course.rating || '4.5'}
                   </div>
-                )}
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 text-xs font-medium text-gray-700 flex items-center gap-1">
-                  <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                  {course.rating || '4.5'}
-                </div>
-                {course.is_enrolled && (
-                  <div className="absolute top-3 left-3 bg-green-500 text-white rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
-                    مشترك
-                  </div>
-                )}
-              </div>
-              
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{course.title}</h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{course.description}</p>
-                
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                  <div className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    <span>{course.students_count || 0} طالب</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>{course.duration || 'غير محدد'}</span>
-                  </div>
+                  {course.is_enrolled && (
+                    <div className="absolute top-3 left-3 bg-green-500 text-white rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      مشترك
+                    </div>
+                  )}
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">المعلم: {course.instructor || 'غير محدد'}</span>
-                  <button 
-                    onClick={() => enrollInCourse(course.id)}
-                    disabled={enrolling === course.id || course.is_enrolled}
-                    className={`px-4 py-2 rounded-lg transition text-sm font-medium ${
-                      course.is_enrolled
-                        ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                        : enrolling === course.id
-                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                  >
-                    {enrolling === course.id ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        جاري الاشتراك...
-                      </div>
-                    ) : course.is_enrolled ? (
-                      'مشترك'
-                    ) : (
-                      'اشتراك'
-                    )}
-                  </button>
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{course.title}</h3>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">{course.description}</p>
+                  
+                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      <span>{course.students_count || 0} طالب</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      <span>{course.duration || 'غير محدد'}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">المعلم: {course.instructor || 'غير محدد'}</span>
+                    <button 
+                      onClick={() => enrollInCourse(course.id)}
+                      disabled={enrolling === course.id || course.is_enrolled}
+                      className={`px-4 py-2 rounded-lg transition text-sm font-medium ${
+                        course.is_enrolled
+                          ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                          : enrolling === course.id
+                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      {enrolling === course.id ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          جاري الاشتراك...
+                        </div>
+                      ) : course.is_enrolled ? (
+                        'مشترك'
+                      ) : (
+                        'اشتراك'
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
-      
-      {/* إحصائيات سريعة */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 text-center">
-          <div className="text-3xl font-bold text-blue-600 mb-2">{courses.length}</div>
-          <div className="text-gray-600">إجمالي الكورسات</div>
-        </div>
-        <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 text-center">
-          <div className="text-3xl font-bold text-green-600 mb-2">
-            {courses.filter(c => c.is_enrolled).length}
+              </motion.div>
+            ))}
           </div>
-          <div className="text-gray-600">الكورسات المشترك فيها</div>
-        </div>
-        <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 text-center">
-          <div className="text-3xl font-bold text-purple-600 mb-2">
-            {courses.reduce((sum, course) => sum + (course.students_count || 0), 0)}
+        )}
+        
+        {/* إحصائيات سريعة */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 text-center">
+            <div className="text-3xl font-bold text-blue-600 mb-2">{courses.length}</div>
+            <div className="text-gray-600">إجمالي الكورسات</div>
           </div>
-          <div className="text-gray-600">إجمالي الطلاب</div>
+          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 text-center">
+            <div className="text-3xl font-bold text-green-600 mb-2">
+              {courses.filter(c => c.is_enrolled).length}
+            </div>
+            <div className="text-gray-600">الكورسات المشترك فيها</div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 text-center">
+            <div className="text-3xl font-bold text-purple-600 mb-2">
+              {courses.reduce((sum, course) => sum + (course.students_count || 0), 0)}
+            </div>
+            <div className="text-gray-600">إجمالي الطلاب</div>
+          </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    </>
   );
 };
 
 export default StudentCoursesPage;
-
-
-
 

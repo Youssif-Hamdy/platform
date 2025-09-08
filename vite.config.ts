@@ -6,13 +6,12 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [
     react(),
-     tailwindcss(),
+    tailwindcss(),
   ],
   server: {
     port: 5173,
     host: true, // يسمح بالوصول من أي IP
     proxy: {
-    
       '/user': {
         target: 'https://educational-platform-git-main-youssefs-projects-e2c35ebf.vercel.app',
         changeOrigin: true,
@@ -30,6 +29,26 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/student/, '/student'),
+      },
+      '/parent': {
+        target: 'https://educational-platform-rksi8yxqa-youssefs-projects-e2c35ebf.vercel.app',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/parent/, '/parent'),
+      },
+
+      // ✅ حل مشكلة static
+      '/static': {
+        target: 'http://localhost:8000', // الباك إند بتاع Django
+        changeOrigin: true,
+        secure: false,
+      },
+
+      // ✅ اختياري: لو عندك media (صور/ملفات مرفوعة)
+      '/media': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
       },
     },
   },

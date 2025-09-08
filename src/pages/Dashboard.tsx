@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, User, Activity, Settings, LogOut, LayoutDashboard, GraduationCap, FileText, Users, ChevronLeft, Menu, AlertTriangle, CheckCircle, Upload, Bell } from 'lucide-react';
+import { BookOpen, User, Activity, Settings, LogOut, LayoutDashboard, GraduationCap, FileText, Users, ChevronLeft, Menu, AlertTriangle, CheckCircle, Upload, Bell, Eye, Award, BarChart3 } from 'lucide-react';
 import ProfilePage from './ProfilePage';
 import SettingsPage from './SettingsPage';
 import LinkChildPage from './LinkChildPage';
-import CoursesPage from './CoursesPage';
 import TeachersPage from './TeachersPage';
 import ReportsPage from './ReportsPage';
 import DashboardHomePage from './DashboardHomePage';
@@ -17,6 +16,10 @@ import TeacherUploadContent from './TeacherUploadContent';
 import StudentCoursesPage from './StudentCoursesPage';
 import StudentMyCoursesPage from './StudentMyCoursesPage';
 import StudentCourseDetailsPage from './StudentCourseDetailsPage';
+import ParentChildMonitoring from './ParentChildMonitoring';
+import ParentLessonsCompleted from './ParentLessonsCompleted';
+import ParentQuizGrades from './ParentQuizGrades';
+import ParentAttendanceReports from './ParentAttendanceReports';
 
 interface Profile {
   id?: number;
@@ -63,6 +66,10 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     | 'studentCourses'
     | 'studentMyCourses'
     | 'studentCourseDetails'
+    | 'parentChildMonitoring'
+    | 'parentLessonsCompleted'
+    | 'parentQuizGrades'
+    | 'parentAttendanceReports'
   >('dashboard');
   const [selectedCourse, setSelectedCourse] = useState<{ id: string | number; title?: string } | null>(null);
   const [selectedSectionTitle, setSelectedSectionTitle] = useState<string | null>(null);
@@ -264,7 +271,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       case 'settings':
         return <SettingsPage showToast={showToast} />;
       case 'courses':
-        return <CoursesPage />;
+        return <StudentCoursesPage />;
       case 'teachers':
         return <TeachersPage />;
       case 'reports':
@@ -320,6 +327,14 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
         ) : (
           <DashboardHomePage />
         );
+      case 'parentChildMonitoring':
+        return <ParentChildMonitoring />;
+      case 'parentLessonsCompleted':
+        return <ParentLessonsCompleted />;
+      case 'parentQuizGrades':
+        return <ParentQuizGrades />;
+      case 'parentAttendanceReports':
+        return <ParentAttendanceReports />;
       default:
         return <DashboardHomePage />;
     }
@@ -352,7 +367,8 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
 
       {/* Top headers */}
       {/* Mobile full-width header */}
-      <div className={`fixed top-0 inset-x-0 z-50 h-12 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 md:hidden ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails') ? '!hidden' : ''}`}>
+      <div className={`fixed top-0 inset-x-0 z-50 h-12 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 md:hidden ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses') ? '!hidden' : ''}`}>
+
         <button onClick={() => setMobileSidebarOpen(true)} className="p-2 rounded-md bg-white border border-gray-200 shadow" aria-label="Open sidebar">
           <Menu className="w-5 h-5 text-blue-700" />
         </button>
@@ -491,7 +507,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
                   {!sidebarCollapsed && <span className="text-sm">دخول إلى الكورس</span>}
                 </button>
               </>
-            ) : (
+            ) : !isParentUser && (
               <>
                 <button 
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
@@ -532,15 +548,53 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
               {!sidebarCollapsed && <span className="text-sm">البروفايل</span>}
             </button>
             {isParentUser && (
-              <button
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                  currentPage === 'linkChild' ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
-                }`}
-                onClick={() => setCurrentPage('linkChild')}
-              >
-                <Users className="w-5 h-5" />
-                {!sidebarCollapsed && <span className="text-sm">ربط حساب الابن</span>}
-              </button>
+              <>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'parentChildMonitoring' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('parentChildMonitoring')}
+                >
+                  <Users className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">متابعة الابن/الابنة</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'parentLessonsCompleted' ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
+                  }`}
+                  onClick={() => setCurrentPage('parentLessonsCompleted')}
+                >
+                  <Eye className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">الإطلاع على الدروس المنجزة</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'parentQuizGrades' ? 'bg-purple-50 text-purple-700' : 'text-gray-700 hover:bg-purple-50 hover:text-purple-700'
+                  }`}
+                  onClick={() => setCurrentPage('parentQuizGrades')}
+                >
+                  <Award className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">عرض درجات الاختبارات</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'parentAttendanceReports' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-700'
+                  }`}
+                  onClick={() => setCurrentPage('parentAttendanceReports')}
+                >
+                  <BarChart3 className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">تقارير الحضور والتقدم</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'linkChild' ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
+                  }`}
+                  onClick={() => setCurrentPage('linkChild')}
+                >
+                  <Users className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">ربط حساب الابن</span>}
+                </button>
+              </>
             )}
           </nav>
           <div className="pt-3 mt-3 border-t border-gray-100" />
@@ -561,7 +615,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       </aside>
 
       {/* Sidebar (mobile drawer) */}
-      <div className={`fixed inset-0 z-60 md:hidden ${mobileSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'} ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails') ? '!hidden' : ''}`}>
+      <div className={`fixed inset-0 z-60 md:hidden ${mobileSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'} ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails'||currentPage === 'studentMyCourses') ? '!hidden' : ''}`}>
         <div className={`absolute inset-0 bg-black/30 transition-opacity ${mobileSidebarOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setMobileSidebarOpen(false)} />
         <div className={`absolute top-0 bottom-0 left-0 w-64 bg-white shadow-xl transition-transform ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-full p-4 overflow-y-auto">
@@ -666,7 +720,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
                     <span className="text-sm">دخول إلى الكورس</span>
                   </button>
                 </>
-              ) : (
+              ) : !isParentUser && (
                 <>
                   <button 
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
@@ -707,15 +761,53 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
                 <span className="text-sm">البروفايل</span>
               </button>
               {isParentUser && (
-                <button
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                    currentPage === 'linkChild' ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
-                  }`}
-                  onClick={() => { setMobileSidebarOpen(false); setCurrentPage('linkChild'); }}
-                >
-                  <Users className="w-5 h-5" />
-                  <span className="text-sm">ربط حساب الابن</span>
-                </button>
+                <>
+                  <button
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'parentChildMonitoring' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('parentChildMonitoring'); }}
+                  >
+                    <Users className="w-5 h-5" />
+                    <span className="text-sm">متابعة الابن/الابنة</span>
+                  </button>
+                  <button
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'parentLessonsCompleted' ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('parentLessonsCompleted'); }}
+                  >
+                    <Eye className="w-5 h-5" />
+                    <span className="text-sm">الإطلاع على الدروس المنجزة</span>
+                  </button>
+                  <button
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'parentQuizGrades' ? 'bg-purple-50 text-purple-700' : 'text-gray-700 hover:bg-purple-50 hover:text-purple-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('parentQuizGrades'); }}
+                  >
+                    <Award className="w-5 h-5" />
+                    <span className="text-sm">عرض درجات الاختبارات</span>
+                  </button>
+                  <button
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'parentAttendanceReports' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('parentAttendanceReports'); }}
+                  >
+                    <BarChart3 className="w-5 h-5" />
+                    <span className="text-sm">تقارير الحضور والتقدم</span>
+                  </button>
+                  <button
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'linkChild' ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('linkChild'); }}
+                  >
+                    <Users className="w-5 h-5" />
+                    <span className="text-sm">ربط حساب الابن</span>
+                  </button>
+                </>
               )}
             </nav>
             <div className="pt-3 mt-3 border-t border-gray-100" />

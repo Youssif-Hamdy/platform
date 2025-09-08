@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import ParentDashboard from "./pages/ParentDashboard";
+import QuizResultsPage from "./pages/QuizResultsPage";
 
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -115,6 +116,14 @@ const App: React.FC = () => {
         element={
           <ProtectedRoute>
             <ParentDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/quiz-results/:attempt_id"
+        element={
+          <ProtectedRoute>
+            <QuizResultsPage />
           </ProtectedRoute>
         }
       />

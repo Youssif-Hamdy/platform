@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   GraduationCap, 
   Clock, 
@@ -109,6 +110,7 @@ const StudentMyCoursesPage: React.FC = () => {
   const [loadingQuiz, setLoadingQuiz] = useState<boolean>(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const navigate = useNavigate();
 
   // Toast functions
   const addToast = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
@@ -303,11 +305,14 @@ const StudentMyCoursesPage: React.FC = () => {
       );
 
       if (res && res.ok) {
-        const result = await res.json();
+        // Read submission response (if any) then navigate to results page
+        try { await res.json(); } catch (e) { /* ignore body parse if empty */ }
         addToast('success', 'تم إرسال الإجابات بنجاح!');
+        const attemptId = currentQuiz.attempt_id;
         setCurrentQuiz(null);
         setQuizAnswers([]);
         loadMyCourses();
+        navigate(`/student/quiz-results/${attemptId}`);
       } else {
         addToast('error', 'حدث خطأ في إرسال الإجابات');
       }
@@ -399,10 +404,10 @@ const StudentMyCoursesPage: React.FC = () => {
 
   // Quiz Timer Effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: number | undefined;
     
     if (currentQuiz && quizTimeRemaining > 0) {
-      interval = setInterval(() => {
+      interval = window.setInterval(() => {
         setQuizTimeRemaining(prev => {
           if (prev <= 1) {
             submitQuiz();
@@ -414,7 +419,7 @@ const StudentMyCoursesPage: React.FC = () => {
     }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (interval !== undefined) window.clearInterval(interval);
     };
   }, [currentQuiz, quizTimeRemaining]);
 
@@ -912,6 +917,8 @@ const StudentMyCoursesPage: React.FC = () => {
                     )}
                   </div>
                 )}
+
+                
               </div>
             ) : (
               <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50/50 to-white/50">
@@ -1104,7 +1111,7 @@ const StudentMyCoursesPage: React.FC = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in {
           from {
             opacity: 0;
@@ -1147,3 +1154,5 @@ const StudentMyCoursesPage: React.FC = () => {
 };
 
 export default StudentMyCoursesPage;
+
+
