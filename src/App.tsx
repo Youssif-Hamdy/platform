@@ -9,6 +9,8 @@ import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import ParentDashboard from "./pages/ParentDashboard";
 import QuizResultsPage from "./pages/QuizResultsPage";
+import AdminDashboard from "./admin/AdminDashboard";
+import AdminDemo from "./admin/AdminDemo";
 
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -73,6 +75,9 @@ const App: React.FC = () => {
       <Route path="/signin" element={<SignIn />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/password-reset" element={<PasswordResetPage />} />
+      <Route path="/admin-dashboard" element={<AdminDashboard/>} />
+      <Route path="/admin-demo" element={<AdminDemo/>} />
+
       <Route
         path="/redirect-by-role"
         element={

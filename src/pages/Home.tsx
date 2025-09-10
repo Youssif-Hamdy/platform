@@ -329,6 +329,51 @@ const LearningPlatform: React.FC = () => {
   const statsParallax = useTransform(scrollYProgress, [0.1, 0.35], [0, -60]);
   const coursesParallax = useTransform(scrollYProgress, [0.2, 0.5], [40, -40]);
 
+  // Animation variants for sections and cards
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 24 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6 }
+    }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.12, delayChildren: 0.1 }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.98 },
+    show: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.45 }
+    }
+  };
+
+  // 3D tilt state for Services card
+  const [tilt, setTilt] = useState<{ rotateX: number; rotateY: number }>({ rotateX: 0, rotateY: 0 });
+  const [shinePos, setShinePos] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
+  const handleTiltMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width; // 0..1
+    const py = (e.clientY - rect.top) / rect.height; // 0..1
+    const rotateY = (px - 0.5) * 14; // left/right
+    const rotateX = -(py - 0.5) * 14; // up/down
+    setTilt({ rotateX, rotateY });
+    setShinePos({ x: px * 100, y: py * 100 });
+  };
+  const handleTiltLeave = () => {
+    setTilt({ rotateX: 0, rotateY: 0 });
+    setShinePos({ x: 50, y: 50 });
+  };
+
   return (
     <div className="min-h-screen bg-white overflow-x-hidden" dir="rtl">
       <Navbar />
@@ -496,10 +541,18 @@ const LearningPlatform: React.FC = () => {
       </motion.section>
 
       {/* قسم الميزات - Responsive */}
-      <motion.section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-b from-white to-blue-50 relative overflow-hidden" style={{ y: statsParallax }}>
+      <motion.section
+        id="about"
+        className="py-12 sm:py-16 lg:py-24 bg-gradient-to-b from-white to-blue-50 relative overflow-hidden"
+        style={{ y: statsParallax }}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={staggerContainer}
+      >
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-blue-100/30"></div>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center mb-12 sm:mb-16 lg:mb-20">
+          <motion.div variants={sectionVariants} className="text-center mb-12 sm:mb-16 lg:mb-20">
             <div className="inline-block px-4 sm:px-6 py-2 bg-blue-100 rounded-full text-blue-600 font-medium mb-4 sm:mb-6 text-sm sm:text-base">
               لماذا نحن مختلفون؟
             </div>
@@ -509,15 +562,19 @@ const LearningPlatform: React.FC = () => {
             <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed px-4">
               نقدم لك تجربة تعليمية فريدة تجمع بين الجودة والمرونة والتفاعل
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8"
+            variants={staggerContainer}
+          >
             {features.map((feature, index) => (
-              <div
+              <motion.div
                 key={index}
-                className="group bg-white rounded-2xl lg:rounded-3xl p-6 lg:p-8 shadow-xl border border-gray-100 hover:border-blue-200 hover:shadow-2xl hover:-translate-y-2 lg:hover:-translate-y-6 transition-all duration-500 relative overflow-hidden"
+                className="group bg-white rounded-2xl lg:rounded-3xl p-6 lg:p-8 shadow-xl border border-gray-100 hover:border-blue-200 hover:shadow-2xl transition-all duration-500 relative overflow-hidden"
+                variants={cardVariants}
+                whileHover={{ y: -8 }}
               >
-                {/* Background Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-blue-100/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
                 <div className="relative z-10">
@@ -527,9 +584,9 @@ const LearningPlatform: React.FC = () => {
                   <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4 text-center group-hover:text-blue-600 transition-colors duration-300">{feature.title}</h3>
                   <p className="text-sm lg:text-base text-gray-600 text-center leading-relaxed">{feature.description}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </motion.section>
 
@@ -569,8 +626,113 @@ const LearningPlatform: React.FC = () => {
         </div>
       </section>
 
+      {/* قسم الخدمات - بطاقة 3D واحدة */}
+      <motion.section
+        id="services"
+        className="py-16 sm:py-20 lg:py-24 bg-white relative overflow-hidden"
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={staggerContainer}
+      >
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-24 -right-24 w-72 h-72 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
+          <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-purple-100 rounded-full blur-3xl opacity-50"></div>
+        </div>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <motion.div variants={sectionVariants} className="text-center mb-10 sm:mb-14">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900">خدماتنا</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto mt-4 text-base sm:text-lg">منصة تعليمية حديثة تجمع بين التفاعل، الجودة، والمرونة لتمنحك أفضل تجربة تعلم.</p>
+          </motion.div>
+
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* الكارد (الصورة) */}
+            <motion.div
+              variants={cardVariants}
+              className="relative"
+              style={{ perspective: 1000 }}
+            >
+              <div
+                onMouseMove={handleTiltMove}
+                onMouseLeave={handleTiltLeave}
+                className="relative rounded-3xl border border-gray-100 bg-white shadow-xl overflow-hidden transition-transform duration-200"
+                style={{
+                  transform: `rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`,
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+                {/* صورة/خلفية */}
+                <div
+                  className="absolute inset-0 rounded-3xl"
+                  style={{
+                    backgroundImage: 'url(https://images.unsplash.com/photo-1673724534205-c1cc5519a26b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    transform: 'translateZ(25px)'
+                  }}
+                ></div>
+                {/* Overlay تدرّجي */}
+                <div
+                  className="absolute inset-0 rounded-3xl"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(2,6,23,0.15) 0%, rgba(2,6,23,0.45) 100%)',
+                    transform: 'translateZ(35px)'
+                  }}
+                ></div>
+                {/* لمعان ديناميكي */}
+                <div
+                  className="pointer-events-none absolute -inset-1 rounded-[28px] opacity-60"
+                  style={{
+                    background: `radial-gradient(600px circle at ${shinePos.x}% ${shinePos.y}%, rgba(59,130,246,0.22), transparent 40%)`,
+                    transform: 'translateZ(45px)'
+                  }}
+                ></div>
+                {/* شارة */}
+                <div className="absolute top-4 left-4 z-10" style={{ transform: 'translateZ(55px)' }}>
+                  <div className="px-3 py-1 rounded-full bg-white/80 backdrop-blur text-blue-700 text-xs font-semibold border border-white/60">
+                    تجربة تعليمية عصرية
+                  </div>
+                </div>
+                {/* نص قصير على الصورة */}
+                <div className="absolute bottom-5 right-5 left-5 z-10 text-white" style={{ transform: 'translateZ(55px)' }}>
+                  <div className="text-sm opacity-90">سلاسة • مرونة • جودة</div>
+                  <div className="text-xl font-bold">تعلم بذكاء وبأسلوب حديث</div>
+                </div>
+                <div className="relative pt-[58%]"></div>
+              </div>
+            </motion.div>
+
+            {/* النص (عن المنصة) */}
+            <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.3 }}>
+              <motion.div variants={sectionVariants} className="mb-4">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-xs font-semibold">
+                  عن منصتنا
+                </div>
+              </motion.div>
+              <motion.h3 variants={sectionVariants} className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                منصة متكاملة للتعلّم الحديث
+              </motion.h3>
+              <motion.p variants={sectionVariants} className="text-gray-600 text-base leading-7 mb-6">
+                نقدّم لك تجربة تعلم سلسة وسريعة مع محتوى مُنتقى بعناية، ومشاريع عملية، ومجتمع داعم. تتبع تقدّمك خطوة بخطوة، وارجع للدروس في أي وقت ومن أي جهاز.
+              </motion.p>
+              <motion.div variants={staggerContainer} className="grid grid-cols-2 gap-3 mb-6">
+                <motion.div variants={cardVariants} className="rounded-xl bg-blue-50 text-blue-700 px-3 py-2 text-xs font-semibold text-center">دعم فوري</motion.div>
+                <motion.div variants={cardVariants} className="rounded-xl bg-emerald-50 text-emerald-700 px-3 py-2 text-xs font-semibold text-center">شهادات</motion.div>
+                <motion.div variants={cardVariants} className="rounded-xl bg-purple-50 text-purple-700 px-3 py-2 text-xs font-semibold text-center">مسارات</motion.div>
+                <motion.div variants={cardVariants} className="rounded-xl bg-amber-50 text-amber-700 px-3 py-2 text-xs font-semibold text-center">وصول دائم</motion.div>
+              </motion.div>
+              <motion.div variants={sectionVariants} className="flex items-center gap-6 text-sm">
+                <div className="text-gray-700"><span className="font-bold text-gray-900">+50K</span> طالب</div>
+                <div className="text-gray-700"><span className="font-bold text-gray-900">+5K</span> كورس</div>
+                <div className="text-gray-700"><span className="font-bold text-gray-900">4.9/5</span> تقييم</div>
+              </motion.div>
+            </motion.div>
+          </div>
+        </div>
+      </motion.section>
+
       {/* قسم الكورسات - سكشن منفصل مع تصميم محسن */}
-      <motion.section className="py-16 sm:py-20 lg:py-24 bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
+      <motion.section id="courses" className="py-16 sm:py-20 lg:py-24 bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-white/50"></div>
         <motion.div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10" style={{ y: coursesParallax }}>
           <div className="text-center mb-12 sm:mb-16 lg:mb-20">

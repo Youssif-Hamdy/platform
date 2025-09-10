@@ -6,7 +6,7 @@ import { Settings, LogOut, User, Key, Lock, XCircle, GraduationCap } from 'lucid
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [activeLink, setActiveLink] = useState('الرئيسية');
+  const [activeLink, setActiveLink] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
@@ -192,6 +192,16 @@ const Navbar = () => {
     document.body.style.overflow = 'auto'; // إعادة تمكين التمرير
     
     // Scroll to section if it exists
+    if (linkName === 'الرئيسية') {
+      if (window.location.pathname === '/') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        // بعد الانتقال للهوم، انزل لأعلى الصفحة
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+      }
+      return;
+    }
+
     if (linkName === 'من نحن') {
       const aboutSection = document.getElementById('about');
       if (aboutSection) {
@@ -255,11 +265,11 @@ const Navbar = () => {
             <li>
               <NavLink
                 to="/"
-                className={({ isActive }) =>
+                className={() =>
                   `text-sm flex items-center font-medium transition-all duration-300 hover:scale-105 ${
                     isScrolled 
-                      ? (isActive ? 'text-blue-600 font-bold' : 'text-gray-700 hover:text-blue-600')
-                      : (isActive ? 'text-white font-bold' : 'text-white/90 hover:text-white')
+                      ? (activeLink === 'الرئيسية' ? 'text-blue-600 font-bold' : 'text-gray-700 hover:text-blue-600')
+                      : (activeLink === 'الرئيسية' ? 'text-white font-bold' : 'text-white/90 hover:text-white')
                   }`
                 }
                 onClick={() => handleLinkClick('الرئيسية')}
@@ -277,8 +287,8 @@ const Navbar = () => {
               <button
                 className={`text-sm flex items-center transition-all duration-300 hover:scale-105 ${
                   isScrolled 
-                    ? 'text-gray-700 hover:text-blue-600'
-                    : 'text-white/90 hover:text-white'
+                    ? (activeLink === 'من نحن' ? 'text-blue-600 font-bold' : 'text-gray-700 hover:text-blue-600')
+                    : (activeLink === 'من نحن' ? 'text-white font-bold' : 'text-white/90 hover:text-white')
                 }`}
                 onClick={() => {
                   if (window.location.pathname === '/') {
@@ -302,8 +312,8 @@ const Navbar = () => {
               <button
                 className={`text-sm flex items-center transition-all duration-300 hover:scale-105 ${
                   isScrolled 
-                    ? 'text-gray-700 hover:text-blue-600'
-                    : 'text-white/90 hover:text-white'
+                    ? (activeLink === 'الدورات' ? 'text-blue-600 font-bold' : 'text-gray-700 hover:text-blue-600')
+                    : (activeLink === 'الدورات' ? 'text-white font-bold' : 'text-white/90 hover:text-white')
                 }`}
                 onClick={() => {
                   if (window.location.pathname === '/') {
@@ -327,8 +337,8 @@ const Navbar = () => {
               <button
                 className={`text-sm flex items-center transition-all duration-300 hover:scale-105 ${
                   isScrolled 
-                    ? 'text-gray-700 hover:text-blue-600'
-                    : 'text-white/90 hover:text-white'
+                    ? (activeLink === 'الخدمات' ? 'text-blue-600 font-bold' : 'text-gray-700 hover:text-blue-600')
+                    : (activeLink === 'الخدمات' ? 'text-white font-bold' : 'text-white/90 hover:text-white')
                 }`}
                 onClick={() => {
                   if (window.location.pathname === '/') {
@@ -451,9 +461,9 @@ const Navbar = () => {
                 <li>
                   <NavLink
                     to="/"
-                    className={({ isActive }) =>
+                    className={() =>
                       `flex items-center p-4 rounded-xl transition-all duration-300 ${
-                        isActive 
+                        activeLink === 'الرئيسية' 
                           ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg' 
                           : 'text-blue-800 hover:bg-blue-100'
                       }`
@@ -468,7 +478,11 @@ const Navbar = () => {
                 </li>
                 <li>
                   <button
-                    className="flex items-center p-4 rounded-xl transition-all duration-300 text-blue-800 hover:bg-blue-100 w-full text-right"
+                    className={`flex items-center p-4 rounded-xl transition-all duration-300 w-full text-right ${
+                      activeLink === 'من نحن'
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
+                        : 'text-blue-800 hover:bg-blue-100'
+                    }`}
                     onClick={() => {
                       if (window.location.pathname === '/') {
                         handleLinkClick('من نحن');
@@ -486,7 +500,11 @@ const Navbar = () => {
                 </li>
                 <li>
                   <button
-                    className="flex items-center p-4 rounded-xl transition-all duration-300 text-blue-800 hover:bg-blue-100 w-full text-right"
+                    className={`flex items-center p-4 rounded-xl transition-all duration-300 w-full text-right ${
+                      activeLink === 'الدورات'
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
+                        : 'text-blue-800 hover:bg-blue-100'
+                    }`}
                     onClick={() => {
                       if (window.location.pathname === '/') {
                         handleLinkClick('الدورات');
@@ -504,7 +522,11 @@ const Navbar = () => {
                 </li>
                 <li>
                   <button
-                    className="flex items-center p-4 rounded-xl transition-all duration-300 text-blue-800 hover:bg-blue-100 w-full text-right"
+                    className={`flex items-center p-4 rounded-xl transition-all duration-300 w-full text-right ${
+                      activeLink === 'الخدمات'
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
+                        : 'text-blue-800 hover:bg-blue-100'
+                    }`}
                     onClick={() => {
                       if (window.location.pathname === '/') {
                         handleLinkClick('الخدمات');

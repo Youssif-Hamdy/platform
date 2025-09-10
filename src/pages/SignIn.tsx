@@ -754,6 +754,9 @@ const SignIn: React.FC = () => {
                                       <option value="student">طالب</option>
                                       <option value="teacher">معلم</option>
                                       <option value="parent">ولي أمر</option>
+                                      <option value="admin">صاحب المنصه</option>
+
+
                                     </select>
                                   </div>
 
