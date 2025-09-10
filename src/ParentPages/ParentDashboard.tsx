@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Dashboard from './Dashboard';
+import Dashboard from '../pages/Dashboard';
 
 const ParentDashboard: React.FC = () => {
   const [childName, setChildName] = useState('');

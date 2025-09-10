@@ -5,12 +5,11 @@ import SignIn from "./pages/SignIn";
 import VerifyEmail from "./component/VerifyEmail";
 import PasswordResetPage from "./pages/PasswordResetPage";
 import Dashboard from "./pages/Dashboard";
-import StudentDashboard from "./pages/StudentDashboard";
-import TeacherDashboard from "./pages/TeacherDashboard";
-import ParentDashboard from "./pages/ParentDashboard";
 import QuizResultsPage from "./pages/QuizResultsPage";
 import AdminDashboard from "./admin/AdminDashboard";
-import AdminDemo from "./admin/AdminDemo";
+import TeacherDashboard from "./TeachersPages/TeacherDashboard";
+import StudentDashboard from "./StudentsPages/StudentDashboard";
+import ParentDashboard from "./ParentPages/ParentDashboard";
 
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -76,7 +75,6 @@ const App: React.FC = () => {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/password-reset" element={<PasswordResetPage />} />
       <Route path="/admin-dashboard" element={<AdminDashboard/>} />
-      <Route path="/admin-demo" element={<AdminDemo/>} />
 
       <Route
         path="/redirect-by-role"
