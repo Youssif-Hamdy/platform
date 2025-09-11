@@ -42,6 +42,12 @@ export default defineConfig({
         secure: true,
         rewrite: (path) => path.replace(/^\/parent/, '/parent'),
       },
+      '/support': {
+        target: 'https://educational-platform-git-support-youssefs-projects-e2c35ebf.vercel.app',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/support/, '/support'),
+      },
 
       // ✅ حل مشكلة static
       '/static': {

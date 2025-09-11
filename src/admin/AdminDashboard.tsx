@@ -6,7 +6,6 @@ import {
   X, 
   Users, 
   GraduationCap, 
-  BarChart3, 
   Star, 
   Shield, 
   Bell,
@@ -16,7 +15,9 @@ import {
   Home,
   TrendingUp,
   UserCheck,
-  ChevronLeft
+  ChevronLeft,
+  MessageSquare,
+  BarChart3
 } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -28,6 +29,7 @@ import SalesAnalytics from './pages/SalesAnalytics';
 import ReviewsManagement from './pages/ReviewsManagement';
 import UsersManagement from './pages/UsersManagement';
 import PermissionsManagement from './pages/PermissionsManagement';
+import SupportCenter from './pages/SupportCenter';
 
 interface User {
   id: number;
@@ -51,6 +53,9 @@ const AdminDashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Support panel state
+  const [unreadTicketCount, setUnreadTicketCount] = useState<number>(0);
+
   // Sidebar menu items
   const menuItems = [
     { id: 'dashboard', label: 'لوحة التحكم', icon: Home, color: 'text-blue-500' },
@@ -60,6 +65,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'analytics', label: 'متابعة المبيعات والإحصائيات', icon: BarChart3, color: 'text-orange-500' },
     { id: 'reviews', label: 'إدارة التقييمات', icon: Star, color: 'text-yellow-500' },
     { id: 'permissions', label: 'نظام صلاحيات المستخدمين', icon: Shield, color: 'text-red-500' },
+    { id: 'support', label: 'مركز الدعم', icon: MessageSquare, color: 'text-blue-500' },
   ];
 
   // Fetch users data
@@ -93,6 +99,38 @@ const AdminDashboard: React.FC = () => {
       toast.error('خطأ في الاتصال بالخادم');
     }
   };
+
+  // Fetch ticket count (for bell badge)
+  const fetchSupportTicketCount = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      if (!accessToken) return;
+      const response = await fetch('/support/get/ticket/stats/', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (typeof data?.total_tickets === 'number') {
+        setUnreadTicketCount(data.total_tickets);
+      }
+    } catch (e) {
+      // ignore badge errors silently
+    }
+  };
+
+  useEffect(() => {
+    fetchSupportTicketCount();
+  }, []);
+
+  useEffect(() => {
+    if (activePage === 'support') {
+      setUnreadTicketCount(0);
+    }
+  }, [activePage]);
 
   useEffect(() => {
     // Check if user is authenticated
@@ -137,6 +175,8 @@ const AdminDashboard: React.FC = () => {
         return <ReviewsManagement />;
       case 'permissions':
         return <PermissionsManagement />;
+      case 'support':
+        return <SupportCenter />;
       default:
         return (
           <div className="p-6">
@@ -272,15 +312,15 @@ const AdminDashboard: React.FC = () => {
           {/* Sidebar Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             {!sidebarCollapsed && (
-              <div className="flex items-center space-x-3 space-x-reverse">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <GraduationCap className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800">لوحة التحكم</h2>
-                  <p className="text-sm text-gray-600">الإدارة العامة</p>
-                </div>
-              </div>
+             <div className="flex items-center gap-3">
+  <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+    <GraduationCap className="w-5 h-5 text-white" />
+  </div>
+  <div className="flex flex-col">
+    <h2 className="text-xl font-bold text-gray-800 leading-tight">لوحة التحكم</h2>
+    <p className="text-sm text-gray-600 mt-0.5">الإدارة العامة</p>
+  </div>
+</div>
             )}
             {sidebarCollapsed && (
               <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mx-auto">
@@ -367,24 +407,29 @@ const AdminDashboard: React.FC = () => {
       <div className={`flex-1 transition-all duration-300 ml-0 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-80'}`}>
         {/* Top Bar */}
         <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div className="flex items-center space-x-4 space-x-reverse">
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-3 rounded-lg hover:bg-gray-100 transition-colors bg-blue-50 hover:bg-blue-100"
-              >
-                <Menu className="w-6 h-6 text-blue-600" />
-              </button>
-              <h1 className="text-2xl font-bold text-gray-800">
-                {menuItems.find(item => item.id === activePage)?.label || 'لوحة التحكم'}
-              </h1>
-            </div>
+        <div className="flex items-center justify-between px-6 py-4">
+  <div className="flex items-center gap-4">
+    {/* Mobile Menu Button */}
+    <button
+      onClick={() => setSidebarOpen(true)}
+      className="lg:hidden p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+    >
+      <Menu className="w-6 h-6 text-blue-600" />
+    </button>
+    
+    <h1 className="text-2xl font-bold text-gray-800">
+      {menuItems.find(item => item.id === activePage)?.label || 'لوحة التحكم'}
+    </h1>
+  </div>
 
             <div className="flex items-center space-x-4 space-x-reverse">
-              <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative">
+              <button onClick={() => setActivePage('support')} className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative">
                 <Bell className="w-6 h-6 text-gray-600" />
-                <span className="absolute -top-1 -left-1 w-3 h-3 bg-red-500 rounded-full"></span>
+                {unreadTicketCount > 0 && (
+                  <span className="absolute -top-1 -left-1 min-w-[1.25rem] h-5 px-1 rounded-full bg-blue-600 text-white text-[10px] leading-5 text-center font-bold">
+                    {unreadTicketCount}
+                  </span>
+                )}
               </button>
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
                 A
@@ -413,9 +458,12 @@ const AdminDashboard: React.FC = () => {
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          className="lg:hidden fixed inset-0 backdrop-blur-sm bg-opacity-50 z-40"
         />
       )}
+
+      {/* Support Panel */}
+
     </div>
   );
 };

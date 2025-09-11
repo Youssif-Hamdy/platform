@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, X, CheckCircle, Activity } from 'lucide-react';
+import { AlertTriangle, X, CheckCircle, Activity, MessageCircle, Send, Mail, Phone } from 'lucide-react';
 
 interface SettingsPageProps {
   showToast: (type: 'success' | 'error' | 'info', message: string) => void;
@@ -10,6 +10,30 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ showToast }) => {
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
   const [deleteError, setDeleteError] = useState<string>('');
+  
+  // Support ticket modal states
+  const [showSupportModal, setShowSupportModal] = useState<boolean>(false);
+  const [supportLoading, setSupportLoading] = useState<boolean>(false);
+  const [supportError, setSupportError] = useState<string>('');
+  const [ticketData, setTicketData] = useState({
+    name: '',
+    email: '',
+    phone_number: '',
+    subject: '',
+    category: 'technical',
+    priority: 'low',
+    description: ''
+  });
+
+  // Contact support modal states
+  const [showContactModal, setShowContactModal] = useState<boolean>(false);
+  const [contactLoading, setContactLoading] = useState<boolean>(false);
+  const [contactError, setContactError] = useState<string>('');
+  const [contactData, setContactData] = useState({
+    name: '',
+    email: '',
+    message: ''
+  });
 
   const refreshToken = async () => {
     try {
@@ -103,6 +127,100 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ showToast }) => {
     }
   };
 
+  const handleSupportTicket = async () => {
+    try {
+      setSupportLoading(true);
+      setSupportError('');
+      
+      // Validate required fields
+      if (!ticketData.name || !ticketData.email || !ticketData.subject || !ticketData.description) {
+        setSupportError('يرجى ملء جميع الحقول المطلوبة');
+        return;
+      }
+      
+      const res = await authFetch('/support/tickets/create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(ticketData)
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        showToast('success', 'تم الارسال الي الدعم بنجاح');
+        setShowSupportModal(false);
+        // Reset form
+        setTicketData({
+          name: '',
+          email: '',
+          phone_number: '',
+          subject: '',
+          category: 'technical',
+          priority: 'low',
+          description: ''
+        });
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setSupportError(errorData.message || `حدث خطأ أثناء إنشاء التيكت (${res.status})`);
+      }
+    } catch (error) {
+      console.error('Error creating support ticket:', error);
+      setSupportError('حدث خطأ غير متوقع');
+    } finally {
+      setSupportLoading(false);
+    }
+  };
+
+  const handleContactSupport = async () => {
+    try {
+      setContactLoading(true);
+      setContactError('');
+      
+      // Validate required fields
+      if (!contactData.name || !contactData.email || !contactData.message) {
+        setContactError('يرجى ملء جميع الحقول المطلوبة');
+        return;
+      }
+      
+      const res = await authFetch('/support/contact/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(contactData)
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        showToast('success', 'تم إرسال رسالتك بنجاح');
+        setShowContactModal(false);
+        // Reset form
+        setContactData({
+          name: '',
+          email: '',
+          message: ''
+        });
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setContactError(errorData.message || `حدث خطأ أثناء إرسال الرسالة (${res.status})`);
+      }
+    } catch (error) {
+      console.error('Error sending contact message:', error);
+      setContactError('حدث خطأ غير متوقع');
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setTicketData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleContactInputChange = (field: string, value: string) => {
+    setContactData(prev => ({ ...prev, [field]: value }));
+  };
+
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -150,6 +268,28 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ showToast }) => {
               </button>
               
               <button 
+                onClick={() => setShowSupportModal(true)}
+                className="w-full text-left p-3 bg-green-50 hover:bg-green-100 rounded-lg transition"
+              >
+                <div className="font-medium text-green-900 flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4" />
+                  الدعم الفني
+                </div>
+                <div className="text-sm text-green-700">إرسال تذكرة دعم فني مفصلة</div>
+              </button>
+
+              <button 
+                onClick={() => setShowContactModal(true)}
+                className="w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition"
+              >
+                <div className="font-medium text-purple-900 flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  اتصل بنا
+                </div>
+                <div className="text-sm text-purple-700">إرسال رسالة سريعة للدعم</div>
+              </button>
+              
+              <button 
                 onClick={() => setShowDeleteModal(true)}
                 className="w-full text-left p-3 bg-red-50 hover:bg-red-100 rounded-lg transition"
               >
@@ -160,6 +300,246 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ showToast }) => {
           </div>
         </div>
       </motion.div>
+
+      {/* Contact Support Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowContactModal(false)} />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-purple-600" />
+                <h3 className="text-lg font-semibold text-gray-900">اتصل بنا</h3>
+              </div>
+              <button 
+                onClick={() => setShowContactModal(false)}
+                className="p-1 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Name Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الاسم *</label>
+                <input
+                  type="text"
+                  value={contactData.name}
+                  onChange={(e) => handleContactInputChange('name', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="أدخل اسمك الكامل"
+                />
+              </div>
+              
+              {/* Email Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني *</label>
+                <input
+                  type="email"
+                  value={contactData.email}
+                  onChange={(e) => handleContactInputChange('email', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="example@email.com"
+                />
+              </div>
+              
+              {/* Message Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الرسالة *</label>
+                <textarea
+                  value={contactData.message}
+                  onChange={(e) => handleContactInputChange('message', e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+                  placeholder="اكتب رسالتك هنا..."
+                />
+              </div>
+            </div>
+            
+            {contactError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">{contactError}</p>
+              </div>
+            )}
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowContactModal(false)}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                disabled={contactLoading}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleContactSupport}
+                disabled={contactLoading}
+                className="flex-1 px-4 py-2 text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {contactLoading ? (
+                  'جاري الإرسال...'
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    إرسال الرسالة
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Support Ticket Modal */}
+      {showSupportModal && (
+        <div className="fixed inset-0 z-70 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowSupportModal(false)} />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">تذكرة دعم فني</h3>
+              </div>
+              <button 
+                onClick={() => setShowSupportModal(false)}
+                className="p-1 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Name Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الاسم *</label>
+                <input
+                  type="text"
+                  value={ticketData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="أدخل اسمك الكامل"
+                />
+              </div>
+              
+              {/* Email Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني *</label>
+                <input
+                  type="email"
+                  value={ticketData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="example@email.com"
+                />
+              </div>
+              
+              {/* Phone Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
+                <input
+                  type="tel"
+                  value={ticketData.phone_number}
+                  onChange={(e) => handleInputChange('phone_number', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="+20 1XX XXX XXXX"
+                />
+              </div>
+              
+              {/* Subject Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الموضوع *</label>
+                <input
+                  type="text"
+                  value={ticketData.subject}
+                  onChange={(e) => handleInputChange('subject', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="موضوع المشكلة أو الاستفسار"
+                />
+              </div>
+              
+              {/* Category Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الفئة</label>
+                <select
+                  value={ticketData.category}
+                  onChange={(e) => handleInputChange('category', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="technical">مشكلة تقنية</option>
+                  <option value="billing">فواتير ومدفوعات</option>
+                  <option value="general">استفسار عام</option>
+                  <option value="account">مشكلة في الحساب</option>
+                </select>
+              </div>
+              
+              {/* Priority Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الأولوية</label>
+                <select
+                  value={ticketData.priority}
+                  onChange={(e) => handleInputChange('priority', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="low">منخفضة</option>
+                  <option value="medium">متوسطة</option>
+                  <option value="high">عالية</option>
+                  <option value="urgent">عاجلة</option>
+                </select>
+              </div>
+              
+              {/* Description Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الوصف *</label>
+                <textarea
+                  value={ticketData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  placeholder="اشرح المشكلة أو الاستفسار بالتفصيل..."
+                />
+              </div>
+            </div>
+            
+            {supportError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">{supportError}</p>
+              </div>
+            )}
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowSupportModal(false)}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                disabled={supportLoading}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleSupportTicket}
+                disabled={supportLoading}
+                className="flex-1 px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {supportLoading ? (
+                  'جاري الإرسال...'
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    إرسال التذكرة
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Delete Account Modal */}
       {showDeleteModal && (
@@ -221,4 +601,3 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ showToast }) => {
 };
 
 export default SettingsPage;
-
