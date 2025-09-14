@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Lock, BookOpen, Eye, EyeOff, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { useNavigate } from "react-router-dom";
-
 
 interface AuthFormData {
   username: string;
@@ -41,8 +39,6 @@ const SignIn: React.FC = () => {
   const [isLogin, setIsLogin] = useState<boolean>(true);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [toast, setToast] = useState<Toast | null>(null);
-  const navigate = useNavigate();
-
   
   // Auth state management (replaces localStorage)
   const [authState, setAuthState] = useState<AuthState>({
@@ -62,7 +58,7 @@ const SignIn: React.FC = () => {
     password_confirm: '',
     first_name: '',
     last_name: '',
-    user_type: '',
+    user_type: 'admin', // تم تعيين القيمة الافتراضية لـ admin
     phone_number: '',
     date_of_birth: '',
     bio: '',
@@ -313,7 +309,7 @@ const SignIn: React.FC = () => {
 
           // Redirect to Home page after successful login
           setTimeout(() => {
-navigate('/dashboard');
+            window.location.href = '/admin-dashboard';
           }, 1500);
         } else {
           // Show detailed error messages
@@ -426,7 +422,7 @@ navigate('/dashboard');
             password_confirm: '',
             first_name: '',
             last_name: '',
-            user_type: '',
+            user_type: 'admin', // إعادة تعيين القيمة الافتراضية لـ admin
             phone_number: '',
             date_of_birth: '',
             bio: '',
@@ -507,8 +503,13 @@ navigate('/dashboard');
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
                 <BookOpen className="h-8 w-8 text-blue-600" />
-                <span className="ml-2 text-xl font-bold text-gray-900">تعلم</span>
+                <span className="ml-2 text-xl font-bold text-gray-900">نظام الإدارة</span>
               </div>
+            </div>
+            <div>
+              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                الدخول
+              </button>
             </div>
           </div>
         </div>
@@ -532,10 +533,10 @@ navigate('/dashboard');
               className="text-center mb-12"
             >
               <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent mb-6">
-                تعلم
+                نظام الإدارة
               </h1>
               <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                منصتك التعليمية المتكاملة للتعلم والتطوير. انضم إلينا اليوم وابدأ رحلتك التعليمية المميزة
+                نظام إدارة المحتوى المتكامل للمدراء فقط. قم بتسجيل الدخول للوصول إلى لوحة التحكم
               </p>
             </motion.div>
 
@@ -568,7 +569,7 @@ navigate('/dashboard');
                       </div>
                       <h2 className="text-4xl font-bold mb-4">مرحباً بك</h2>
                       <p className="text-xl text-blue-100 leading-relaxed max-w-sm">
-                        منصة تعليمية حديثة تجمع بين أحدث التقنيات وأفضل المناهج التعليمية
+                        نظام إدارة محتوى حصري للمدراء المعتمدين فقط
                       </p>
                     </motion.div>
                   </div>
@@ -594,7 +595,7 @@ navigate('/dashboard');
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                         }`}
                     >
-                      إنشاء حساب
+                      إنشاء حساب مدير
                     </button>
                   </div>
 
@@ -614,7 +615,7 @@ navigate('/dashboard');
                           >
                             <div className="text-center mb-8">
                               <h3 className="text-3xl font-bold text-gray-800 mb-2">أهلاً بعودتك</h3>
-                              <p className="text-gray-600">قم بتسجيل الدخول للمتابعة</p>
+                              <p className="text-gray-600">قم بتسجيل الدخول للوصول إلى لوحة التحكم</p>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-6">
@@ -674,8 +675,8 @@ navigate('/dashboard');
                             className="flex-1 flex flex-col"
                           >
                             <div className="text-center mb-4 md:mb-6">
-                              <h3 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">انضم إلينا</h3>
-                              <p className="text-sm md:text-base text-gray-600">أنشئ حسابك الجديد وابدأ التعلم</p>
+                              <h3 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">إنشاء حساب مدير جديد</h3>
+                              <p className="text-sm md:text-base text-gray-600">أنشئ حساب مدير جديد للوصول إلى لوحة التحكم</p>
                             </div>
 
                             {/* Registration Form */}
@@ -739,23 +740,20 @@ navigate('/dashboard');
                                   </div>
                                 </div>
 
-                                {/* Row 3: User Type & Phone */}
+                                {/* Row 3: User Type (Hidden - Fixed as Admin) & Phone */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div className="relative">
-                                    <select
+                                    <input
+                                      type="text"
+                                      value="مدير"
+                                      disabled
+                                      className="w-full pr-10 pl-3 py-3 border border-gray-200 rounded-lg bg-gray-100 text-right text-sm cursor-not-allowed"
+                                    />
+                                    <input
+                                      type="hidden"
                                       name="user_type"
-                                      value={formData.user_type}
-                                      onChange={handleInputChange}
-                                      required
-                                      className="w-full pr-3 pl-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-right text-sm bg-gray-50/50 hover:bg-white"
-                                    >
-                                      <option value="" disabled>اختر نوع المستخدم</option>
-                                      <option value="student">طالب</option>
-                                      <option value="teacher">معلم</option>
-                                      <option value="parent">ولي أمر</option>
-
-
-                                    </select>
+                                      value="admin"
+                                    />
                                   </div>
 
                                   <div className="relative">
@@ -885,7 +883,7 @@ navigate('/dashboard');
                                   whileTap={{ scale: 0.98 }}
                                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-semibold shadow-sm hover:shadow-sm transition-all duration-300 mt-6"
                                 >
-                                  إنشاء الحساب
+                                  إنشاء حساب مدير
                                 </motion.button>
                               </form>
                             </div>
@@ -935,8 +933,8 @@ navigate('/dashboard');
       <footer className="bg-white border-t border-gray-100 py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-gray-500 text-sm">
-            <p>© 2023 منصة تعلم. جميع الحقوق محفوظة.</p>
-            <p className="mt-2">منصة تعليمية متكاملة لتطوير مهاراتك</p>
+            <p>© 2023 نظام الإدارة. جميع الحقوق محفوظة.</p>
+            <p className="mt-2">نظام حصري للمدراء المعتمدين فقط</p>
           </div>
         </div>
       </footer>

@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   Trophy,
   Target,
-  Star,
   ChevronRight,
   AlertTriangle,
   Check,
@@ -104,13 +103,43 @@ const StudentMyCoursesPage: React.FC = () => {
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswer[]>([]);
   const [quizTimeRemaining, setQuizTimeRemaining] = useState<number>(0);
   const [quizSubmitting, setQuizSubmitting] = useState<boolean>(false);
-  const [sectionExplanations, setSectionExplanations] = useState<{[key: string]: string}>({});
-  const [loadingExplanation, setLoadingExplanation] = useState<{[key: string]: boolean}>({});
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [loadingQuiz, setLoadingQuiz] = useState<boolean>(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const navigate = useNavigate();
+
+  // Local progress tracking functions
+  const getLocalProgress = (courseId: number) => {
+    const progress = localStorage.getItem(`course_progress_${courseId}`);
+    return progress ? JSON.parse(progress) : { completedSections: [], lastViewedSection: null };
+  };
+
+  const markSectionAsCompleted = (courseId: number, sectionId: number) => {
+    const progress = getLocalProgress(courseId);
+    if (!progress.completedSections.includes(sectionId)) {
+      progress.completedSections.push(sectionId);
+      localStorage.setItem(`course_progress_${courseId}`, JSON.stringify(progress));
+      addToast('success', 'تم تحديد القسم كمكتمل!');
+    }
+  };
+
+  const isSectionCompleted = (courseId: number, sectionId: number) => {
+    const progress = getLocalProgress(courseId);
+    return progress.completedSections.includes(sectionId);
+  };
+
+  const getCourseProgressPercentage = (course: Course) => {
+    const progress = getLocalProgress(course.id);
+    const totalSections = course.sections?.length || 0;
+    if (totalSections === 0) return 0;
+    return Math.round((progress.completedSections.length / totalSections) * 100);
+  };
+
+  const getCompletedSectionsCount = (course: Course) => {
+    const progress = getLocalProgress(course.id);
+    return progress.completedSections.length;
+  };
 
   // Toast functions
   const addToast = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
@@ -230,8 +259,8 @@ const StudentMyCoursesPage: React.FC = () => {
       
       const coursesWithProgress = coursesData.map((course: Course) => ({
         ...course,
-        progress: calculateCourseProgress(course),
-        completed_sections: course.sections?.filter(s => s.is_completed).length || 0
+        progress: getCourseProgressPercentage(course),
+        completed_sections: getCompletedSectionsCount(course)
       }));
       
       setCourses(coursesWithProgress);
@@ -324,45 +353,6 @@ const StudentMyCoursesPage: React.FC = () => {
     }
   };
 
-  const calculateCourseProgress = (course: Course): number => {
-    if (!course.sections || course.sections.length === 0) return 0;
-    const completedSections = course.sections.filter(s => s.is_completed).length;
-    return Math.round((completedSections / course.sections.length) * 100);
-  };
-
-  const loadSectionExplanation = async (courseId: number, sectionOrder: number) => {
-    const key = `${courseId}-${sectionOrder}`;
-    
-    if (sectionExplanations[key] || loadingExplanation[key]) {
-      return;
-    }
-
-    try {
-      setLoadingExplanation(prev => ({ ...prev, [key]: true }));
-      
-      const res = await authFetch(`/student/course/${courseId}/section/${sectionOrder}/explain`);
-      
-      if (res && res.ok) {
-        const data = await res.json();
-        setSectionExplanations(prev => ({ 
-          ...prev, 
-          [key]: data.explanation || 'لا يوجد شرح متاح لهذا القسم' 
-        }));
-        addToast('success', 'تم تحميل الشرح بنجاح');
-      } else {
-        addToast('error', 'فشل في تحميل الشرح');
-      }
-    } catch (e) {
-      console.error('Error loading section explanation:', e);
-      setSectionExplanations(prev => ({ 
-        ...prev, 
-        [key]: 'حدث خطأ في تحميل شرح القسم' 
-      }));
-      addToast('error', 'حدث خطأ في تحميل الشرح');
-    } finally {
-      setLoadingExplanation(prev => ({ ...prev, [key]: false }));
-    }
-  };
 
   const getSectionIcon = (contentType: string, hasQuiz: boolean) => {
     if (hasQuiz) {
@@ -469,41 +459,49 @@ const StudentMyCoursesPage: React.FC = () => {
     return (
       <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-white">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-800 to-blue-900 text-white px-6 py-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => setSelectedCourse(null)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-700/50 hover:bg-blue-600/50 transition-all duration-300 transform hover:scale-105"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span className="hidden md:inline font-medium">العودة</span>
-              </button>
-              <div>
-                <h1 className="text-xl font-bold truncate">{selectedCourse.title}</h1>
-                <p className="text-blue-200 text-sm">المعلم: {selectedCourse.teacher_name}</p>
+    <div className="bg-gradient-to-r from-blue-800 to-blue-900 text-white px-4 py-3 sm:px-6 sm:py-4 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+            <button 
+              onClick={() => setSelectedCourse(null)}
+              className="flex-shrink-0 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-xl bg-blue-700/50 hover:bg-blue-600/50 transition-all duration-300"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden xs:inline font-medium text-xs sm:text-sm">العودة</span>
+            </button>
+            
+            <div className="min-w-0 flex-1 text-right mr-2">
+              <h1 className="text-sm sm:text-xl font-bold truncate">
+                {selectedCourse.title.length > 20 ? 
+                  `${selectedCourse.title.substring(0, 20)}...` : 
+                  selectedCourse.title
+                }
+              </h1>
+              <p className="text-blue-200 text-xs sm:text-sm truncate">
+                المعلم: {selectedCourse.teacher_name}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="text-right hidden md:block">
+                <div className="text-blue-200 text-xs sm:text-sm">التقدم</div>
+                <div className="text-white font-bold text-sm">{selectedCourse.progress || 0}%</div>
+              </div>
+              <div className="w-20 sm:w-32 bg-blue-700/50 rounded-full h-2 sm:h-3">
+                <div 
+                  className="h-2 sm:h-3 rounded-full bg-gradient-to-r from-white to-blue-200 transition-all duration-500"
+                  style={{ width: `${selectedCourse.progress || 0}%` }}
+                ></div>
               </div>
             </div>
-            
-            <div className="flex items-center gap-6">
-              <div className="hidden md:flex items-center gap-3">
-                <div className="text-right">
-                  <div className="text-blue-200 text-sm">التقدم</div>
-                  <div className="text-white font-bold">{selectedCourse.progress || 0}%</div>
-                </div>
-                <div className="w-32 bg-blue-700/50 rounded-full h-3">
-                  <div 
-                    className="h-3 rounded-full bg-gradient-to-r from-white to-blue-200 transition-all duration-500"
-                    style={{ width: `${selectedCourse.progress || 0}%` }}
-                  ></div>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-3 rounded-xl bg-blue-700/50 hover:bg-blue-600/50 transition-all duration-300 transform hover:scale-105 lg:hidden"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
+            <button 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 sm:p-3 rounded-xl bg-blue-700/50 hover:bg-blue-600/50 transition-all duration-300 lg:hidden"
+            >
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
             </div>
           </div>
         </div>
@@ -542,7 +540,9 @@ const StudentMyCoursesPage: React.FC = () => {
 
     {/* Sections List */}
     <div className="flex-1 overflow-y-auto">
-      {selectedCourse.sections?.map((section, index) => (
+                {selectedCourse.sections?.map((section, index) => {
+                  const isCompleted = isSectionCompleted(selectedCourse.id, section.id);
+                  return (
         <div key={section.id} className="border-b border-blue-100/50 last:border-b-0">
           <button
             onClick={() => {
@@ -556,8 +556,8 @@ const StudentMyCoursesPage: React.FC = () => {
           >
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0">
-                {section.is_completed ? (
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                {isCompleted ? (
+                  <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
                     <CheckCircle className="w-5 h-5 text-white" />
                   </div>
                 ) : (
@@ -582,8 +582,8 @@ const StudentMyCoursesPage: React.FC = () => {
                         <span>اختبار</span>
                       </div>
                     )}
-                    {section.is_completed && (
-                      <div className="flex items-center gap-1 text-blue-700">
+                    {isCompleted && (
+                      <div className="flex items-center gap-1 text-green-700">
                         <CheckCircle className="w-3 h-3" />
                         <span>مكتمل</span>
                       </div>
@@ -597,7 +597,8 @@ const StudentMyCoursesPage: React.FC = () => {
             </div>
           </button>
         </div>
-      ))}
+      );
+      })}
     </div>
 
     {/* Progress Summary - يظهر فقط عندما لا يكون السايدبار مصغرًا */}
@@ -655,8 +656,8 @@ const StudentMyCoursesPage: React.FC = () => {
                          selectedSection.content_type === 'pdf' ? 'ملف PDF' : 'محتوى نصي'}
                       </span>
                     </div>
-                    {selectedSection.is_completed && (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg">
+                    {isSectionCompleted(selectedCourse.id, selectedSection.id) && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg">
                         <CheckCircle className="w-4 h-4" />
                         <span>مكتمل</span>
                       </div>
@@ -710,26 +711,23 @@ const StudentMyCoursesPage: React.FC = () => {
 
                 {/* Section Actions */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {/* Explanation */}
-                  <button 
-                    onClick={() => loadSectionExplanation(selectedCourse.id, selectedSection.order)}
-                    className="group p-6 bg-white/80 backdrop-blur-sm border border-blue-200/50 rounded-2xl hover:bg-blue-50/50 transition-all duration-300 transform hover:scale-105 shadow-lg"
-                    disabled={loadingExplanation[`${selectedCourse.id}-${selectedSection.order}`]}
-                  >
-                    <div className="flex items-center justify-center gap-3">
-                      {loadingExplanation[`${selectedCourse.id}-${selectedSection.order}`] ? (
-                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-300 border-t-blue-600"></div>
-                      ) : (
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-all duration-300">
-                          <BookOpen className="w-6 h-6 text-blue-600" />
+                  {/* Mark as Completed Button */}
+                  {!isSectionCompleted(selectedCourse.id, selectedSection.id) && (
+                    <button 
+                      onClick={() => markSectionAsCompleted(selectedCourse.id, selectedSection.id)}
+                      className="group p-6 bg-white/80 backdrop-blur-sm border border-green-200/50 rounded-2xl hover:bg-green-50/50 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    >
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-all duration-300">
+                          <CheckCircle className="w-6 h-6 text-green-600" />
                         </div>
-                      )}
-                      <div className="text-right">
-                        <div className="font-semibold text-blue-900">عرض الشرح</div>
-                        <div className="text-sm text-blue-600">شرح مفصل للقسم</div>
+                        <div className="text-right">
+                          <div className="font-semibold text-green-900">تحديد كمكتمل</div>
+                          <div className="text-sm text-green-600">انتهيت من هذا القسم</div>
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                  )}
 
                   {/* Quiz */}
                   {selectedSection.has_quiz && (
@@ -758,36 +756,10 @@ const StudentMyCoursesPage: React.FC = () => {
                     </button>
                   )}
 
-                  {/* Mark as Complete */}
-                  {!selectedSection.is_completed && (
-                    <button className="group p-6 bg-white/80 backdrop-blur-sm border border-blue-200/50 rounded-2xl hover:bg-blue-50/50 transition-all duration-300 transform hover:scale-105 shadow-lg">
-                      <div className="flex items-center justify-center gap-3">
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-all duration-300">
-                          <CheckCircle className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold text-blue-900">تسجيل كمكتمل</div>
-                          <div className="text-sm text-blue-600">اتمام القسم</div>
-                        </div>
-                      </div>
-                    </button>
-                  )}
+                
                 </div>
 
-                {/* Section Explanation */}
-                {sectionExplanations[`${selectedCourse.id}-${selectedSection.order}`] && (
-                  <div className="bg-gradient-to-r from-blue-50 to-white border border-blue-200/50 rounded-2xl p-8 mb-8 shadow-lg animate-fade-in">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                        <Star className="w-5 h-5 text-white" />
-                      </div>
-                      <h3 className="text-xl font-bold text-blue-900">شرح القسم</h3>
-                    </div>
-                    <div className="text-blue-800 whitespace-pre-wrap leading-relaxed bg-white/70 rounded-xl p-6">
-                      {sectionExplanations[`${selectedCourse.id}-${selectedSection.order}`]}
-                    </div>
-                  </div>
-                )}
+             
 
                 {/* Quiz Display */}
                 {currentQuiz && (
@@ -1013,6 +985,12 @@ const StudentMyCoursesPage: React.FC = () => {
                   <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-bold text-blue-800 shadow-lg">
                     {course.progress || 0}% مكتمل
                   </div>
+                  {/* Completion Status Badge */}
+                  {(course.progress || 0) === 100 && (
+                    <div className="absolute top-4 left-4 bg-green-500 text-white rounded-full p-2 shadow-lg animate-pulse">
+                      <CheckCircle className="w-5 h-5" />
+                    </div>
+                  )}
                   <div className="absolute bottom-4 left-4 right-4">
                     <div className="bg-white/20 rounded-full h-2">
                       <div 
@@ -1024,9 +1002,17 @@ const StudentMyCoursesPage: React.FC = () => {
                 </div>
                 
                 <div className="p-8">
-                  <h3 className="text-xl font-bold text-blue-900 mb-3 line-clamp-2 group-hover:text-blue-700 transition-colors duration-300">
-                    {course.title}
-                  </h3>
+                  <div className="flex items-center gap-3 mb-3">
+                    <h3 className="text-xl font-bold text-blue-900 line-clamp-2 group-hover:text-blue-700 transition-colors duration-300 flex-1">
+                      {course.title}
+                    </h3>
+                    {(course.progress || 0) === 100 && (
+                      <div className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>مكتمل</span>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-blue-600 text-sm mb-6 line-clamp-2 leading-relaxed">
                     {course.description}
                   </p>
@@ -1059,10 +1045,23 @@ const StudentMyCoursesPage: React.FC = () => {
                     <div className="text-sm text-blue-600">
                       <span className="font-medium">المعلم:</span> {course.teacher_name}
                     </div>
-                    <button className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 text-sm font-bold transform hover:scale-105 shadow-lg">
+                    <button className={`px-6 py-3 rounded-xl transition-all duration-300 text-sm font-bold transform hover:scale-105 shadow-lg ${
+                      (course.progress || 0) === 100 
+                        ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
+                        : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700'
+                    }`}>
                       <div className="flex items-center gap-2">
-                        <PlayCircle className="w-4 h-4" />
-                        <span>دخول للكورس</span>
+                        {(course.progress || 0) === 100 ? (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            <span>مراجعة الكورس</span>
+                          </>
+                        ) : (
+                          <>
+                            <PlayCircle className="w-4 h-4" />
+                            <span>دخول للكورس</span>
+                          </>
+                        )}
                       </div>
                     </button>
                   </div>

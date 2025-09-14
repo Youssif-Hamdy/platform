@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Users, Award, Clock, TrendingUp, Calendar, Target, CheckCircle, AlertCircle } from 'lucide-react';
+import { BookOpen, Award, Clock, TrendingUp, Calendar, CheckCircle, Target } from 'lucide-react';
+
+interface StatisticsData {
+  total_learning_time_minutes: number;
+  courses_in_progress: number;
+  courses_completed: number;
+  current_streak_days: number;
+  total_quizzes_taken: number;
+  average_quiz_score: number;
+}
 
 interface DashboardData {
   enrolled_courses: number;
@@ -27,6 +36,7 @@ interface DashboardData {
 }
 
 const DashboardHomePage: React.FC = () => {
+  const [statisticsData, setStatisticsData] = useState<StatisticsData | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -85,7 +95,43 @@ const DashboardHomePage: React.FC = () => {
     return res;
   };
 
+  const loadStudentStatistics = async () => {
+    try {
+      const res = await authFetch('/student/statistics/');
+      
+      if (res && res.ok) {
+        const data = await res.json();
+        console.log('Statistics data loaded:', data);
+        setStatisticsData(data);
+      } else {
+        console.log('Statistics API failed');
+        setStatisticsData(null);
+      }
+    } catch (e) {
+      console.error('Error loading statistics data:', e);
+      setStatisticsData(null);
+    }
+  };
+
   const loadDashboardData = async () => {
+    try {
+      const res = await authFetch('/student/dashboard/');
+      
+      if (res && res.ok) {
+        const data = await res.json();
+        console.log('Dashboard data loaded:', data);
+        setDashboardData(data);
+      } else {
+        console.log('Dashboard API failed, using default data');
+        setDashboardData(null);
+      }
+    } catch (e) {
+      console.error('Error loading dashboard data:', e);
+      setDashboardData(null);
+    }
+  };
+
+  const loadAllData = async () => {
     if (!isStudentUser) {
       setLoading(false);
       return;
@@ -95,29 +141,27 @@ const DashboardHomePage: React.FC = () => {
       setLoading(true);
       setError('');
       
-      const res = await authFetch('/student/dashboard/');
+      // تحميل البيانات بالتوازي
+      await Promise.all([
+        loadStudentStatistics(),
+        loadDashboardData()
+      ]);
       
-      if (!res || !res.ok) {
-        console.log('Dashboard API failed, using default data');
-        setDashboardData(null); // سيستخدم البيانات الافتراضية
-        return;
-      }
-      
-      const data = await res.json();
-      console.log('Dashboard data loaded:', data);
-      setDashboardData(data);
     } catch (e) {
-      console.error('Error loading dashboard data:', e);
-      console.log('Using default data due to error');
-      setDashboardData(null); // سيستخدم البيانات الافتراضية
+      console.error('Error loading data:', e);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDashboardData();
+    loadAllData();
   }, []);
+
+  // تحويل الدقائق إلى ساعات
+  const minutesToHours = (minutes: number) => {
+    return Math.round(minutes / 60 * 10) / 10; // تقريب إلى منزلة عشرية واحدة
+  };
 
   // بيانات تجريبية للإحصائيات (للطلاب الآخرين)
   const defaultStats = [
@@ -155,11 +199,11 @@ const DashboardHomePage: React.FC = () => {
     }
   ];
 
-  // استخدام البيانات من API أو البيانات الافتراضية
-  const stats = isStudentUser && dashboardData ? [
+  // استخدام البيانات من Statistics API أو البيانات الافتراضية
+  const stats = isStudentUser && statisticsData ? [
     {
-      title: 'الدورات المسجلة',
-      value: (dashboardData.enrolled_courses || 0).toString(),
+      title: 'الدورات قيد التقدم',
+      value: statisticsData.courses_in_progress.toString(),
       change: '+2',
       trend: 'up',
       icon: BookOpen,
@@ -167,7 +211,7 @@ const DashboardHomePage: React.FC = () => {
     },
     {
       title: 'ساعات الدراسة',
-      value: (dashboardData.study_hours || 0).toString(),
+      value: minutesToHours(statisticsData.total_learning_time_minutes).toString(),
       change: '+6',
       trend: 'up',
       icon: Clock,
@@ -175,7 +219,7 @@ const DashboardHomePage: React.FC = () => {
     },
     {
       title: 'الاختبارات المكتملة',
-      value: (dashboardData.completed_quizzes || 0).toString(),
+      value: statisticsData.total_quizzes_taken.toString(),
       change: '+3',
       trend: 'up',
       icon: CheckCircle,
@@ -183,7 +227,7 @@ const DashboardHomePage: React.FC = () => {
     },
     {
       title: 'متوسط الدرجات',
-      value: `${dashboardData.average_score || 0}%`,
+      value: `${Math.round(statisticsData.average_quiz_score)}%`,
       change: '+5%',
       trend: 'up',
       icon: Award,
@@ -243,7 +287,7 @@ const DashboardHomePage: React.FC = () => {
     { subject: 'اللغة الإنجليزية', progress: 94 }
   ];
 
-  // استخدام البيانات من API أو البيانات الافتراضية
+  // استخدام البيانات من Dashboard API أو البيانات الافتراضية
   const recentActivities = isStudentUser && dashboardData && dashboardData.recent_activities ? dashboardData.recent_activities : defaultRecentActivities;
   const upcomingTasks = isStudentUser && dashboardData && dashboardData.upcoming_tasks ? dashboardData.upcoming_tasks : defaultUpcomingTasks;
   const weeklyProgress = isStudentUser && dashboardData && dashboardData.weekly_progress ? dashboardData.weekly_progress : defaultWeeklyProgress;
@@ -281,6 +325,47 @@ const DashboardHomePage: React.FC = () => {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">لوحة التحكم</h1>
       
+      {/* عرض معلومات إضافية للطلاب من Statistics API */}
+      {isStudentUser && statisticsData && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* الدورات المكتملة */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{statisticsData.courses_completed}</div>
+                <div className="text-sm text-gray-600">الدورات المكتملة</div>
+              </div>
+              <div className="p-3 rounded-lg bg-green-100">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* الأيام المتتالية */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{statisticsData.current_streak_days}</div>
+                <div className="text-sm text-gray-600">أيام متتالية</div>
+              </div>
+              <div className="p-3 rounded-lg bg-orange-100">
+                <Target className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* الإحصائيات السريعة */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {stats.map((stat, index) => (
@@ -369,7 +454,7 @@ const DashboardHomePage: React.FC = () => {
           <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 mt-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">التقدم الأسبوعي</h3>
             <div className="space-y-4">
-              {weeklyProgress.map((item, index) => (
+              {weeklyProgress.map((item) => (
                 <div key={item.subject} className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">{item.subject}</span>
                   <div className="flex items-center gap-2">

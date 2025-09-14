@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GraduationCap, Clock, Users, Star, CheckCircle, AlertCircle, X, Check, Info } from 'lucide-react';
+import { GraduationCap, Clock, Users, Star, AlertCircle, X, Check, Info } from 'lucide-react';
 
 interface Course {
   id: number;
@@ -12,7 +12,6 @@ interface Course {
   rating: number;
   image?: string;
   price?: number;
-  is_enrolled?: boolean;
 }
 
 interface Toast {
@@ -204,6 +203,7 @@ const StudentCoursesPage: React.FC = () => {
       setLoading(true);
       setError('');
       
+      // تحميل الكورسات المتاحة
       const res = await authFetch('/student/get-all-courses/');
       
       if (!res || !res.ok) {
@@ -213,8 +213,23 @@ const StudentCoursesPage: React.FC = () => {
       }
       
       const data = await res.json();
-      setCourses(data.results || data || []);
-      addToast('success', 'تم بنجاح', 'تم تحميل الكورسات بنجاح');
+      const allCourses = data.results || data || [];
+      
+      // تحميل الكورسات المسجلة لاستبعادها
+      const enrolledRes = await authFetch('/student/my-courses/');
+      let enrolledCourses: any[] = [];
+      
+      if (enrolledRes && enrolledRes.ok) {
+        const enrolledData = await enrolledRes.json();
+        enrolledCourses = enrolledData.results || enrolledData || [];
+      }
+      
+      // استبعاد الكورسات المسجلة من الكورسات المتاحة
+      const enrolledCourseIds = enrolledCourses.map((course: any) => course.id);
+      const availableCourses = allCourses.filter((course: Course) => !enrolledCourseIds.includes(course.id));
+      
+      setCourses(availableCourses);
+      addToast('success', 'تم بنجاح', `تم تحميل ${availableCourses.length} كورس متاح`);
     } catch (e) {
       console.error('Error loading courses:', e);
       setError('حدث خطأ أثناء تحميل الكورسات');
@@ -240,15 +255,11 @@ const StudentCoursesPage: React.FC = () => {
         throw new Error('فشل في الاشتراك');
       }
       
-      // تحديث حالة الكورس
-      setCourses(prev => prev.map(course => 
-        course.id === courseId 
-          ? { ...course, is_enrolled: true }
-          : course
-      ));
+      // إزالة الكورس من القائمة المتاحة (لأنه أصبح مسجلاً)
+      setCourses(prev => prev.filter(course => course.id !== courseId));
       
       // إظهار رسالة نجاح
-      addToast('success', 'تم الاشتراك بنجاح! 🎉', `تم اشتراكك في "${courseName}" بنجاح. يمكنك الآن الوصول لجميع محتويات الكورس`);
+      addToast('success', 'تم الاشتراك بنجاح! 🎉', `تم اشتراكك في "${courseName}" بنجاح. يمكنك الآن الوصول إليه من صفحة "كورساتي"`);
       
     } catch (e) {
       console.error('Error enrolling:', e);
@@ -300,15 +311,15 @@ const StudentCoursesPage: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">مشاهدة الكورسات</h1>
-          <p className="text-gray-600">استكشف جميع الكورسات المتاحة واشترك في ما يناسبك</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">الكورسات المتاحة</h1>
+          <p className="text-gray-600">استكشف الكورسات الجديدة المتاحة للاشتراك</p>
         </div>
         
         {courses.length === 0 ? (
           <div className="text-center py-12">
             <GraduationCap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">لا توجد كورسات متاحة</h3>
-            <p className="text-gray-600">لم يتم العثور على أي كورسات في الوقت الحالي</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">لا توجد كورسات جديدة متاحة</h3>
+            <p className="text-gray-600">جميع الكورسات متاحة في صفحة "كورساتي" أو لم يتم إضافة كورسات جديدة بعد</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -336,12 +347,6 @@ const StudentCoursesPage: React.FC = () => {
                     <Star className="w-3 h-3 text-yellow-500 fill-current" />
                     {course.rating || '4.5'}
                   </div>
-                  {course.is_enrolled && (
-                    <div className="absolute top-3 left-3 bg-green-500 text-white rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" />
-                      مشترك
-                    </div>
-                  )}
                 </div>
                 
                 <div className="p-6">
@@ -363,11 +368,9 @@ const StudentCoursesPage: React.FC = () => {
                     <span className="text-sm text-gray-600">المعلم: {course.instructor || 'غير محدد'}</span>
                     <button 
                       onClick={() => enrollInCourse(course.id)}
-                      disabled={enrolling === course.id || course.is_enrolled}
+                      disabled={enrolling === course.id}
                       className={`px-4 py-2 rounded-lg transition text-sm font-medium ${
-                        course.is_enrolled
-                          ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                          : enrolling === course.id
+                        enrolling === course.id
                           ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                           : 'bg-blue-600 text-white hover:bg-blue-700'
                       }`}
@@ -377,8 +380,6 @@ const StudentCoursesPage: React.FC = () => {
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                           جاري الاشتراك...
                         </div>
-                      ) : course.is_enrolled ? (
-                        'مشترك'
                       ) : (
                         'اشتراك'
                       )}
@@ -394,19 +395,19 @@ const StudentCoursesPage: React.FC = () => {
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 text-center">
             <div className="text-3xl font-bold text-blue-600 mb-2">{courses.length}</div>
-            <div className="text-gray-600">إجمالي الكورسات</div>
+            <div className="text-gray-600">الكورسات المتاحة</div>
           </div>
           <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 text-center">
-            <div className="text-3xl font-bold text-green-600 mb-2">
-              {courses.filter(c => c.is_enrolled).length}
+            <div className="text-3xl font-bold text-orange-600 mb-2">
+              {courses.length}
             </div>
-            <div className="text-gray-600">الكورسات المشترك فيها</div>
+            <div className="text-gray-600">كورسات جديدة للاشتراك</div>
           </div>
           <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 text-center">
             <div className="text-3xl font-bold text-purple-600 mb-2">
               {courses.reduce((sum, course) => sum + (course.students_count || 0), 0)}
             </div>
-            <div className="text-gray-600">إجمالي الطلاب</div>
+            <div className="text-gray-600">إجمالي الطلاب المسجلين</div>
           </div>
         </div>
       </motion.div>

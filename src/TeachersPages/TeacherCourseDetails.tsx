@@ -6,7 +6,6 @@ import {
   Download, 
   Clock, 
   Eye, 
-  ChevronDown, 
   Plus,
   Edit,
   Trash2,
@@ -16,7 +15,11 @@ import {
   Users,
   Star,
   BarChart3,
-  ArrowRight
+  ArrowRight,
+  Play,
+  Award,
+  Menu,
+  X
 } from 'lucide-react';
 
 const API_BASE = '';
@@ -60,7 +63,8 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
   const [sections, setSections] = useState<DetailedSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [expandedSection, setExpandedSection] = useState<string | number | null>(null);
+  const [selectedSection, setSelectedSection] = useState<DetailedSection | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -86,6 +90,10 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
         const data = await res.json();
         const basicSections = Array.isArray(data) ? data : (data?.results || []);
         setSections(basicSections);
+        // تحديد أول قسم كافتراضي
+        if (basicSections.length > 0) {
+          setSelectedSection(basicSections[0]);
+        }
       } catch (e: any) {
         setError(e?.message || 'حدث خطأ غير متوقع');
       } finally {
@@ -113,35 +121,35 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
         setSections(prev => prev.map(s => 
           s.id === sectionId ? { ...s, ...detailedSection } : s
         ));
+        return detailedSection;
       }
     } catch (error) {
       console.error('Error fetching section details:', error);
     }
   };
 
-  const toggleSection = (sectionId: string | number) => {
-    if (expandedSection === sectionId) {
-      setExpandedSection(null);
-    } else {
-      setExpandedSection(sectionId);
-      // Fetch detailed section data if not already loaded
-      const section = sections.find(s => s.id === sectionId);
-      if (section && !section.quiz) {
-        fetchSectionDetails(sectionId);
+  const handleSectionClick = async (section: DetailedSection) => {
+    setSelectedSection(section);
+    
+    // إذا لم نحمل التفاصيل بعد، احضرها
+    if (!section.quiz) {
+      const detailedSection = await fetchSectionDetails(section.id);
+      if (detailedSection) {
+        setSelectedSection({ ...section, ...detailedSection });
       }
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <motion.div 
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">جار تحميل محتوى الدورة...</p>
+          <div className="w-12 h-12 border-3 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">جار تحميل محتوى الدورة...</p>
         </motion.div>
       </div>
     );
@@ -149,323 +157,373 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center bg-white p-8 rounded-2xl shadow-lg"
+          className="text-center bg-white p-8 rounded-2xl shadow-sm max-w-md w-full"
         >
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-red-500 text-2xl">⚠️</span>
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-500 text-xl">⚠️</span>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">حدث خطأ</h2>
-          <p className="text-red-600">{error}</p>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">حدث خطأ</h2>
+          <p className="text-red-600 text-sm">{error}</p>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Header Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white/90 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-40 shadow-sm"
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar - قائمة الأقسام */}
+      <motion.div
+        initial={false}
+        animate={{ width: sidebarCollapsed ? 64 : 320 }}
+        className="bg-white border-r border-gray-200 flex flex-col"
       >
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            {/* Title Section */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="flex items-center space-x-3 space-x-reverse"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                  {courseTitle || 'تفاصيل الكورس'}
-                </h1>
-                <p className="text-gray-600 text-sm">محتوى وأقسام الدورة التعليمية</p>
-              </div>
-            </motion.div>
-
-            {/* Action Buttons */}
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center space-x-2 space-x-reverse"
-            >
-              <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => window.location.href = '/dashboard'}
-                className="flex items-center space-x-2 space-x-reverse bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            {!sidebarCollapsed && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-2"
               >
-                <ArrowRight className="w-4 h-4" />
-                <span>العودة للداشبورد</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center space-x-2 space-x-reverse bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                <Plus className="w-4 h-4" />
-                <span>إضافة قسم</span>
-              </motion.button>
-            </motion.div>
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <BookOpen className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-gray-900 text-sm">أقسام الكورس</h2>
+                  <p className="text-xs text-gray-600">{sections.length} قسم</p>
+                </div>
+              </motion.div>
+            )}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              {sidebarCollapsed ? <Menu className="w-4 h-4" /> : <X className="w-4 h-4" />}
+            </button>
           </div>
+
+          {!sidebarCollapsed && (
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="w-full mt-3 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>إضافة قسم جديد</span>
+            </motion.button>
+          )}
+        </div>
+
+        {/* Sections List */}
+        <div className="flex-1 overflow-y-auto p-2">
+          {sections.length === 0 ? (
+            !sidebarCollapsed && (
+              <div className="text-center py-8">
+                <BookOpen className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">لا توجد أقسام</p>
+              </div>
+            )
+          ) : (
+            <div className="space-y-1">
+              {sections.map((section, index) => (
+                <motion.button
+                  key={section.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  onClick={() => handleSectionClick(section)}
+                  className={`w-full text-right p-3 rounded-lg transition-all duration-200 ${
+                    selectedSection?.id === section.id 
+                      ? 'bg-blue-50 border border-blue-200 text-blue-900' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  {sidebarCollapsed ? (
+                    <div className="flex justify-center">
+                      {section.content_type === 'video' ? (
+                        <Video className="w-5 h-5 text-blue-500" />
+                      ) : section.content_type === 'pdf' ? (
+                        <File className="w-5 h-5 text-red-500" />
+                      ) : (
+                        <FileText className="w-5 h-5 text-green-500" />
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        {section.content_type === 'video' ? (
+                          <Video className="w-4 h-4 text-blue-500" />
+                        ) : section.content_type === 'pdf' ? (
+                          <File className="w-4 h-4 text-red-500" />
+                        ) : (
+                          <FileText className="w-4 h-4 text-green-500" />
+                        )}
+                        <span className="font-medium text-sm truncate">{section.title}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>{section.duration_minutes || 0} دقيقة</span>
+                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+                          {section.order || 0}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </motion.button>
+              ))}
+            </div>
+          )}
         </div>
       </motion.div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {sections.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-16"
-          >
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <BookOpen className="w-12 h-12 text-blue-600" />
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {courseTitle || 'تفاصيل الكورس'}
+              </h1>
+              <p className="text-gray-600 mt-1">
+                {selectedSection ? `القسم: ${selectedSection.title}` : 'اختر قسماً لعرض محتواه'}
+              </p>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">لا توجد أقسام بعد</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              ابدأ بإضافة أقسام للدورة لتنظيم المحتوى التعليمي
-            </p>
             <motion.button
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              className="inline-flex items-center space-x-2 space-x-reverse bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => window.location.href = '/dashboard'}
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             >
-              <Plus className="w-5 h-5" />
-              <span>إضافة قسم جديد</span>
+              <ArrowRight className="w-4 h-4" />
+              <span>العودة للداشبورد</span>
             </motion.button>
-          </motion.div>
-        ) : (
-          <div className="space-y-4">
-            {sections.map((section, index) => (
-              <motion.div
-                key={section.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
-                className="bg-white/90 backdrop-blur-xl rounded-3xl border border-gray-200/60 shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden"
-              >
-                {/* Section Header */}
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <button 
-                      onClick={() => toggleSection(section.id)}
-                      className="flex-1 text-right hover:bg-gray-50 p-3 rounded-xl transition-all duration-300 group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3 space-x-reverse">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center">
-                            {section.content_type === 'video' ? (
-                              <Video className="w-5 h-5 text-blue-600" />
-                            ) : section.content_type === 'pdf' ? (
-                              <File className="w-5 h-5 text-blue-600" />
-                            ) : (
-                              <FileText className="w-5 h-5 text-blue-600" />
-                            )}
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
-                              {section.title}
-                            </h3>
-                            {section.description && (
-                              <p className="text-gray-600 mt-1 text-sm">{section.description}</p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-3 space-x-reverse">
-                          <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium">
-                            {section.content_type || 'نص'}
-                          </span>
-                          <motion.div
-                            animate={{ rotate: expandedSection === section.id ? 180 : 0 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            <ChevronDown className="w-5 h-5 text-gray-400" />
-                          </motion.div>
-                        </div>
-                      </div>
-                    </button>
+          </div>
+        </div>
+
+        {/* Content Display */}
+        <div className="flex-1 overflow-y-auto">
+          {selectedSection ? (
+            <motion.div
+              key={selectedSection.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-6"
+            >
+              {/* Section Header */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center">
+                      {selectedSection.content_type === 'video' ? (
+                        <Video className="w-6 h-6 text-blue-500" />
+                      ) : selectedSection.content_type === 'pdf' ? (
+                        <File className="w-6 h-6 text-red-500" />
+                      ) : (
+                        <FileText className="w-6 h-6 text-green-500" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">{selectedSection.title}</h2>
+                      {selectedSection.description && (
+                        <p className="text-gray-600 mt-1">{selectedSection.description}</p>
+                      )}
+                    </div>
                   </div>
-                  
-                  {onAddQuiz && (
-                    <div className="mt-4">
+
+                  <div className="flex items-center gap-2">
+                    {onAddQuiz && (
                       <motion.button 
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => onAddQuiz(section.title)} 
-                        className="flex items-center space-x-2 space-x-reverse px-4 py-2 text-sm rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-lg transition-all duration-300"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => onAddQuiz(selectedSection.title)} 
+                        className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
                       >
                         <Plus className="w-4 h-4" />
                         <span>إضافة اختبار</span>
                       </motion.button>
-                    </div>
-                  )}
+                    )}
+                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    <button className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Expanded Content */}
-                <AnimatePresence>
-                  {expandedSection === section.id && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="border-t border-gray-200/60"
-                    >
-                      <div className="p-6 space-y-4">
-                        {/* Content */}
-                        {section.content && (
-                          <div className="bg-gray-50 rounded-xl p-4">
-                            <div className="flex items-center space-x-2 space-x-reverse mb-3">
-                              <FileText className="w-4 h-4 text-blue-600" />
-                              <h4 className="text-base font-semibold text-gray-900">المحتوى النصي</h4>
-                            </div>
-                            <div className="text-gray-700 whitespace-pre-wrap leading-relaxed text-sm">
-                              {section.content}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Video */}
-                        {section.video_file && (
-                          <div className="bg-gray-50 rounded-xl p-4">
-                            <div className="flex items-center space-x-2 space-x-reverse mb-3">
-                              <Video className="w-4 h-4 text-blue-600" />
-                              <h4 className="text-base font-semibold text-gray-900">الفيديو</h4>
-                            </div>
-                            <video controls className="w-full rounded-lg shadow-lg">
-                              <source src={section.video_file} />
-                            </video>
-                          </div>
-                        )}
-                        
-                        {/* PDF */}
-                        {section.pdf_file && (
-                          <div className="bg-gray-50 rounded-xl p-4">
-                            <div className="flex items-center space-x-2 space-x-reverse mb-3">
-                              <File className="w-4 h-4 text-blue-600" />
-                              <h4 className="text-base font-semibold text-gray-900">ملف PDF</h4>
-                            </div>
-                            <motion.a 
-                              whileHover={{ scale: 1.05 }}
-                              href={section.pdf_file} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              className="inline-flex items-center space-x-2 space-x-reverse bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300"
-                            >
-                              <Download className="w-4 h-4" />
-                              <span>تحميل الملف</span>
-                            </motion.a>
-                          </div>
-                        )}
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-medium text-gray-600">المدة</span>
+                    </div>
+                    <p className="text-lg font-bold text-gray-900">{selectedSection.duration_minutes || 0} دقيقة</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Eye className="w-4 h-4 text-green-500" />
+                      <span className="text-sm font-medium text-gray-600">المشاهدات</span>
+                    </div>
+                    <p className="text-lg font-bold text-gray-900">{selectedSection.total_views || 0}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <BarChart3 className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm font-medium text-gray-600">الترتيب</span>
+                    </div>
+                    <p className="text-lg font-bold text-gray-900">{selectedSection.order || 0}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FileText className="w-4 h-4 text-orange-500" />
+                      <span className="text-sm font-medium text-gray-600">النوع</span>
+                    </div>
+                    <p className="text-lg font-bold text-gray-900">
+                      {selectedSection.content_type === 'video' ? 'فيديو' :
+                       selectedSection.content_type === 'pdf' ? 'PDF' : 'نص'}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-                        {/* Quiz */}
-                        {section.quiz && (
-                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-                            <div className="flex items-center space-x-2 space-x-reverse mb-3">
-                              <HelpCircle className="w-4 h-4 text-blue-600" />
-                              <h4 className="text-base font-semibold text-blue-900">الاختبار</h4>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                              <div className="bg-white/80 rounded-lg p-3">
-                                <h5 className="font-semibold text-gray-900 mb-1 text-sm">{section.quiz.title}</h5>
-                                {section.quiz.description && (
-                                  <p className="text-gray-600 text-xs mb-2">{section.quiz.description}</p>
-                                )}
-                              </div>
-                              <div className="bg-white/80 rounded-lg p-3">
-                                <div className="flex items-center space-x-1 space-x-reverse mb-1">
-                                  <Clock className="w-3 h-3 text-blue-500" />
-                                  <span className="text-xs font-medium">الحد الزمني</span>
-                                </div>
-                                <p className="text-sm font-bold text-gray-900">{section.quiz.time_limit_minutes} دقيقة</p>
-                              </div>
-                              <div className="bg-white/80 rounded-lg p-3">
-                                <div className="flex items-center space-x-1 space-x-reverse mb-1">
-                                  <BarChart3 className="w-3 h-3 text-green-500" />
-                                  <span className="text-xs font-medium">درجة النجاح</span>
-                                </div>
-                                <p className="text-sm font-bold text-gray-900">{section.quiz.passing_score}%</p>
-                              </div>
-                              <div className="bg-white/80 rounded-lg p-3">
-                                <div className="flex items-center space-x-1 space-x-reverse mb-1">
-                                  <Users className="w-3 h-3 text-purple-500" />
-                                  <span className="text-xs font-medium">المحاولات</span>
-                                </div>
-                                <p className="text-sm font-bold text-gray-900">{section.quiz.total_attempts || 0}</p>
-                              </div>
-                              <div className="bg-white/80 rounded-lg p-3">
-                                <div className="flex items-center space-x-1 space-x-reverse mb-1">
-                                  <Star className="w-3 h-3 text-yellow-500" />
-                                  <span className="text-xs font-medium">متوسط الدرجة</span>
-                                </div>
-                                <p className="text-sm font-bold text-gray-900">{section.quiz.average_score || '0%'}</p>
-                              </div>
-                              <div className="bg-white/80 rounded-lg p-3">
-                                <div className="flex items-center space-x-1 space-x-reverse mb-1">
-                                  <HelpCircle className="w-3 h-3 text-indigo-500" />
-                                  <span className="text-xs font-medium">عدد الأسئلة</span>
-                                </div>
-                                <p className="text-sm font-bold text-gray-900">{section.quiz.question_count || 0}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Section Stats */}
-                        <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 rounded-lg p-3">
-                          <div className="flex items-center space-x-4 space-x-reverse">
-                            <div className="flex items-center space-x-1 space-x-reverse">
-                              <span className="font-medium">الترتيب:</span>
-                              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg text-xs">{section.order || 0}</span>
-                            </div>
-                            <div className="flex items-center space-x-1 space-x-reverse">
-                              <Clock className="w-3 h-3" />
-                              <span>{section.duration_minutes || 0} دقيقة</span>
-                            </div>
-                            <div className="flex items-center space-x-1 space-x-reverse">
-                              <Eye className="w-3 h-3" />
-                              <span>{section.total_views || 0} مشاهدة</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-1 space-x-reverse">
-                            <motion.button 
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-200 transition-all duration-300"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </motion.button>
-                            <motion.button 
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all duration-300"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </motion.button>
-                          </div>
-                        </div>
+              {/* Content Sections */}
+              <div className="space-y-6">
+                {/* Text Content */}
+                {selectedSection.content && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-green-500" />
+                      المحتوى النصي
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {selectedSection.content}
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            ))}
-          </div>
-        )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Video Content */}
+                {selectedSection.video_file && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <Video className="w-5 h-5 text-blue-500" />
+                      الفيديو التعليمي
+                    </h3>
+                    <div className="bg-gray-100 rounded-lg aspect-video flex items-center justify-center">
+                      <div className="text-center">
+                        <Play className="w-16 h-16 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-600">معاينة الفيديو</p>
+                        <p className="text-sm text-gray-500 mt-1">انقر للتشغيل</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* PDF Content */}
+                {selectedSection.pdf_file && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <File className="w-5 h-5 text-red-500" />
+                      ملف PDF
+                    </h3>
+                    <div className="flex items-center justify-center p-8 bg-gray-50 rounded-lg">
+                      <motion.button 
+                        whileHover={{ scale: 1.05 }}
+                        className="flex items-center gap-3 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg text-lg transition-colors"
+                      >
+                        <Download className="w-5 h-5" />
+                        <span>تحميل الملف</span>
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Quiz Section */}
+                {selectedSection.quiz && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">
+                      <HelpCircle className="w-5 h-5 text-blue-600" />
+                      معلومات الاختبار
+                    </h3>
+                    
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-4">
+                      <h4 className="font-semibold text-gray-900 mb-1">{selectedSection.quiz.title}</h4>
+                      {selectedSection.quiz.description && (
+                        <p className="text-gray-700 text-sm">{selectedSection.quiz.description}</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Clock className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm font-medium text-gray-600">الوقت المحدد</span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.time_limit_minutes} دقيقة</p>
+                      </div>
+                      
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Award className="w-4 h-4 text-green-500" />
+                          <span className="text-sm font-medium text-gray-600">درجة النجاح</span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.passing_score}%</p>
+                      </div>
+                      
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="w-4 h-4 text-purple-500" />
+                          <span className="text-sm font-medium text-gray-600">عدد المحاولات</span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.total_attempts || 0}</p>
+                      </div>
+                      
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Star className="w-4 h-4 text-yellow-500" />
+                          <span className="text-sm font-medium text-gray-600">متوسط الدرجات</span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.average_score || '0%'}</p>
+                      </div>
+                      
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <HelpCircle className="w-4 h-4 text-indigo-500" />
+                          <span className="text-sm font-medium text-gray-600">عدد الأسئلة</span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.question_count || 0}</p>
+                      </div>
+                      
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <BarChart3 className="w-4 h-4 text-orange-500" />
+                          <span className="text-sm font-medium text-gray-600">الحد الأقصى للمحاولات</span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.max_attempts || 'غير محدود'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">اختر قسماً لعرض محتواه</h3>
+                <p className="text-gray-500">انقر على أي قسم من الشريط الجانبي لعرض تفاصيله</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -2,6 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, TrendingUp, BarChart3, Target, BookOpen, Star, Trophy, Medal } from 'lucide-react';
 
+interface Child {
+  id: number;
+  name: string;
+  username: string;
+}
+
 interface QuizResult {
   course_name: string;
   quizzes_completed: number;
@@ -9,7 +15,7 @@ interface QuizResult {
 }
 
 interface QuizData {
-  child: string;
+  child: Child;
   courses: QuizResult[];
   summary: {
     total_courses: number;
@@ -23,6 +29,7 @@ const ParentQuizGrades: React.FC = () => {
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [childId, setChildId] = useState<number | null>(null);
 
   const authFetch = async (url: string, init?: RequestInit) => {
     const token = localStorage.getItem('accessToken');
@@ -30,16 +37,16 @@ const ParentQuizGrades: React.FC = () => {
       window.location.href = '/signin';
       return new Response(null, { status: 401 });
     }
-    
+
     let res = await fetch(url, {
       ...init,
       headers: {
         ...(init && init.headers ? init.headers : {}),
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
     });
-    
+
     if (res.status === 401) {
       localStorage.clear();
       window.location.href = '/signin';
@@ -48,17 +55,16 @@ const ParentQuizGrades: React.FC = () => {
     return res;
   };
 
-  const loadQuizData = async () => {
+  const loadQuizData = async (id: number) => {
     try {
       setLoading(true);
       setError('');
 
-      // استخدام child_id = 9 كمثال
-      const res = await authFetch('/parent/children/9/quiz-results/');
+      const res = await authFetch(`/parent/children/${id}/quiz-results/`);
       if (!res.ok) {
         throw new Error('فشل في تحميل بيانات درجات الاختبارات');
       }
-      
+
       const data = await res.json();
       setQuizData(data);
     } catch (err) {
@@ -70,9 +76,30 @@ const ParentQuizGrades: React.FC = () => {
   };
 
   useEffect(() => {
-    loadQuizData();
-  }, []);
+    const fetchProfile = async () => {
+      try {
+        const res = await authFetch('/user/profile/parent/');
+        if (!res.ok) throw new Error('فشل في تحميل بيانات البروفايل');
 
+        const profileData = await res.json();
+
+        if (profileData.children && profileData.children.length > 0) {
+          const firstChildId = profileData.children[0].id;
+          setChildId(firstChildId);
+          loadQuizData(firstChildId);
+        } else {
+          setError('لا يوجد أطفال مسجلين');
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error fetching parent profile:', err);
+        setError('حدث خطأ في تحميل البروفايل');
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -150,7 +177,7 @@ const ParentQuizGrades: React.FC = () => {
             </div>
             <h1 className="text-3xl font-bold text-gray-900">عرض درجات الاختبارات</h1>
           </div>
-          <p className="text-gray-600">متابعة أداء {quizData.child} في الاختبارات</p>
+          <p className="text-gray-600">متابعة أداء {quizData.child.name} في الاختبارات</p>
         </motion.div>
 
         {/* Summary Cards */}

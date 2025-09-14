@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   FaGraduationCap,
   FaChalkboardTeacher,
@@ -39,7 +39,6 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 const sliderImages = [
   "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
   "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
-  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
   "https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
 ];
 
@@ -373,6 +372,15 @@ const LearningPlatform: React.FC = () => {
     setTilt({ rotateX: 0, rotateY: 0 });
     setShinePos({ x: 50, y: 50 });
   };
+    const scrollToCourses = useCallback(() => {
+    const coursesSection = document.getElementById('courses');
+    if (coursesSection) {
+      coursesSection.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden" dir="rtl">
@@ -888,60 +896,169 @@ const LearningPlatform: React.FC = () => {
         </motion.div>
       </motion.section>
 
-      {/* قسم دعوة للعمل - Responsive */}
-      <section className="py-16 sm:py-24 lg:py-32 bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-blue-100/30"></div>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-2xl lg:rounded-3xl p-8 sm:p-12 lg:p-16 text-center relative overflow-hidden shadow-2xl">
-            {/* Background Pattern - Hidden on mobile for performance */}
-            {!isMobile && (
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/20 to-transparent"></div>
-                <div className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full animate-pulse"></div>
-                <div className="absolute bottom-10 left-10 w-40 h-40 bg-white/5 rounded-full animate-bounce"></div>
-                <div className="absolute top-1/2 left-20 w-20 h-20 bg-white/10 rounded-full animate-ping"></div>
-                <div className="absolute top-1/4 right-1/4 w-16 h-16 bg-white/5 rounded-full animate-spin-slow"></div>
-              </div>
-            )}
-
-            <div className="relative z-10">
-              <div className="inline-block px-4 sm:px-6 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white font-medium mb-6 sm:mb-8 border border-white/30 text-sm sm:text-base">
-                ابدأ رحلتك اليوم
-              </div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-white mb-6 sm:mb-8 leading-tight px-2">
-                مستعد لبدء رحلتك التعليمية؟
-              </h2>
-              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-blue-100 mb-8 sm:mb-10 lg:mb-12 max-w-4xl mx-auto leading-relaxed px-4">
-                سجل الآن واحصل على وصول غير محدود لجميع الكورسات مع خصم <span className="font-bold text-yellow-300">30%</span> للأعضاء الجدد
-              </p>
-
-              <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 max-w-lg mx-auto">
-                <button className="group flex-1 px-6 sm:px-8 py-4 sm:py-5 bg-white text-blue-600 rounded-xl lg:rounded-2xl font-bold text-base sm:text-lg shadow-2xl hover:scale-105 transform transition-all duration-300 flex items-center justify-center space-x-3 space-x-reverse relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-                  <FaPlay className="text-sm relative z-10 group-hover:scale-110 transition-transform duration-300" />
-                  <span className="relative z-10">سجل مجانًا الآن</span>
-                </button>
-
-                <button className="group flex-1 px-6 sm:px-8 py-4 sm:py-5 bg-white/20 text-white border-2 border-white/30 rounded-xl lg:rounded-2xl font-bold text-base sm:text-lg backdrop-blur-md hover:bg-white/30 transition-all duration-300 flex items-center justify-center space-x-3 space-x-reverse hover:scale-105 transform">
-                  <FaSearch className="text-sm group-hover:scale-110 transition-transform duration-300" />
-                  <span>تصفح الكورسات</span>
-                </button>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-8 sm:space-x-reverse mt-8 sm:mt-12 text-white/80">
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <FaUsers className="text-base sm:text-lg" />
-                  <span className="text-sm sm:text-base">50,000+ طالب</span>
-                </div>
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <FaStar className="text-base sm:text-lg text-yellow-300" />
-                  <span className="text-sm sm:text-base">تقييم 4.9/5</span>
-                </div>
-              </div>
+    {/* قسم دعوة للعمل - تصميم جديد مع خلفية رمادية */}
+<section className="py-16 sm:py-24 lg:py-32 bg-gray-50 relative overflow-hidden">
+  <div className="absolute inset-0 bg-gradient-to-r from-gray-100/50 to-gray-200/30"></div>
+  
+  {/* عناصر زخرفية */}
+  <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+  <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+  
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+    <div className="bg-white rounded-2xl lg:rounded-3xl p-8 sm:p-12 lg:p-16 relative overflow-hidden shadow-lg flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+      
+      {/* الصورة الجانبية */}
+      <div className="lg:w-2/5 relative">
+        <motion.div
+          initial={{ opacity: 0, x: -50 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.7 }}
+          viewport={{ once: true }}
+          className="relative"
+        >
+          <div className="relative rounded-2xl overflow-hidden shadow-xl">
+            <img 
+              src="https://images.unsplash.com/photo-1522881193457-37ae97c905bf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80" 
+              alt="طالب يدرس على الكمبيوتر" 
+              className="w-full h-auto"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/30 to-transparent"></div>
+            
+            {/* شارة على الصورة */}
+            <div className="absolute top-4 left-4 bg-amber-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center">
+              <FaStar className="ml-1 text-xs" />
+              <span>الأكثر إقبالاً</span>
             </div>
           </div>
-        </div>
-      </section>
+          
+          {/* عناصر عائمة تفاعلية حول الصورة */}
+          <motion.div
+            animate={{ y: [0, -10, 0] }}
+            transition={{ duration: 4, repeat: Infinity }}
+            className="absolute -top-4 -right-4 bg-blue-600 w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
+          >
+            <FaGraduationCap className="text-white text-xl" />
+          </motion.div>
+          
+          <motion.div
+            animate={{ y: [0, 10, 0] }}
+            transition={{ duration: 5, repeat: Infinity, delay: 0.5 }}
+            className="absolute -bottom-4 -left-4 bg-green-600 w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
+          >
+            <FaBook className="text-white text-lg" />
+          </motion.div>
+        </motion.div>
+      </div>
+      
+      {/* المحتوى النصي مع أيقونات */}
+      <div className="lg:w-3/5">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.2 }}
+          viewport={{ once: true }}
+          className="inline-flex items-center justify-center px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-medium mb-6 sm:mb-8 text-sm sm:text-base"
+        >
+          <FaPlay className="ml-2 text-xs" />
+          ابدأ رحلتك التعليمية اليوم
+        </motion.div>
+        
+        <motion.h2 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.3 }}
+          viewport={{ once: true }}
+          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 sm:mb-8 leading-tight"
+        >
+          انطلق نحو مستقبل أفضل 
+          <span className="block mt-2 text-blue-600">بمعرفة لا حدود لها</span>
+        </motion.h2>
+        
+        <motion.p 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.4 }}
+          viewport={{ once: true }}
+          className="text-base sm:text-lg text-gray-600 mb-8 sm:mb-10 lg:mb-12 leading-relaxed"
+        >
+          انضم إلى <span className="font-semibold text-blue-600">50,000+</span> طالب وطالبة بدأوا رحلتهم نحو التميز المهني واكتساب المهارات التي تفتح الأبواب لأفضل الفرص الوظيفية في السوق.
+        </motion.p>
+        
+        {/* ميزات مع أيقونات */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.5 }}
+          viewport={{ once: true }}
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8"
+        >
+          {[
+            { icon: <FaUsers className="text-xl" />, text: "مجتمع نشط من المتعلمين", color: "text-blue-600" },
+            { icon: <FaStar className="text-xl" />, text: "جودة عالية في المحتوى", color: "text-amber-600" },
+            { icon: <FaClock className="text-xl" />, text: "مرونة في الوقت والمكان", color: "text-green-600" },
+            { icon: <FaChartLine className="text-xl" />, text: "تقدم مستمر نحو أهدافك", color: "text-purple-600" }
+          ].map((item, index) => (
+            <motion.div
+              key={index}
+              whileHover={{ x: 5 }}
+              className="flex items-center space-x-3 space-x-reverse p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all cursor-pointer"
+            >
+              <div className={`${item.color} bg-white p-2 rounded-lg shadow-sm`}>
+                {item.icon}
+              </div>
+              <div className="text-gray-700 font-medium">{item.text}</div>
+            </motion.div>
+          ))}
+        </motion.div>
+        
+        {/* إحصائيات */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.6 }}
+          viewport={{ once: true }}
+          className="flex flex-wrap gap-6 mb-8"
+        >
+          {[
+            { number: "98%", text: "رضى الطلاب", icon: <FaStar className="text-amber-500" /> },
+            { number: "+5K", text: "كورس متاح", icon: <FaBook className="text-blue-500" /> },
+            { number: "500+", text: "خبير متخصص", icon: <FaUsers className="text-green-500" /> }
+          ].map((stat, index) => (
+            <div key={index} className="flex items-center space-x-2 space-x-reverse">
+              <div className="text-2xl font-bold text-gray-900">{stat.number}</div>
+              <div className="text-gray-600">{stat.text}</div>
+              <div>{stat.icon}</div>
+            </div>
+          ))}
+        </motion.div>
+        
+        {/* مؤشر تفاعلي */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.7 }}
+          viewport={{ once: true }}
+          className="flex items-center space-x-4 space-x-reverse"
+        >
+          <motion.div
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-3 h-3 rounded-full bg-blue-600"
+          ></motion.div>
+          
+        <motion.div 
+            whileHover={{ x: -5 }}
+            className="group flex items-center text-blue-600 hover:text-blue-700 cursor-pointer transition-all duration-300 font-medium"
+            onClick={scrollToCourses} // أضف هذا السطر
+          >
+            <span className="text-lg mr-2 group-hover:mr-3 transition-all">اكتشف الكورسات المتاحة</span>
+            <FaChevronLeft className="group-hover:translate-x-1 transition-transform" />
+          </motion.div>
+        </motion.div>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* تذييل الصفحة - Responsive */}
       <footer className="bg-gray-900 text-white pt-12 sm:pt-16 lg:pt-20 pb-6 sm:pb-8 lg:pb-10 relative overflow-hidden">

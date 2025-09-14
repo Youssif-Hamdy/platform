@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Settings, LogOut, User, Key, Lock, XCircle, GraduationCap } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
+
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,6 +14,7 @@ const Navbar = () => {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showChangePasswordForm, setShowChangePasswordForm] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const navigate = useNavigate();
   const [changePasswordData, setChangePasswordData] = useState({
     old_password: '',
     new_password: '',
@@ -96,7 +99,7 @@ const Navbar = () => {
       localStorage.removeItem('userData');
       setIsLoggedIn(false);
       setShowUserMenu(false);
-      window.location.href = '/';
+       navigate("/signin");
     }
   };
 

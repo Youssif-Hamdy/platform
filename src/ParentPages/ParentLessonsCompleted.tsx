@@ -31,6 +31,7 @@ const ParentLessonsCompleted: React.FC = () => {
   const [lessonsData, setLessonsData] = useState<LessonsData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [childId, setChildId] = useState<number | null>(null);
 
   const authFetch = async (url: string, init?: RequestInit) => {
     const token = localStorage.getItem('accessToken');
@@ -44,8 +45,8 @@ const ParentLessonsCompleted: React.FC = () => {
       headers: {
         ...(init && init.headers ? init.headers : {}),
         'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
+        'Accept': 'application/json',
+      },
     });
     
     if (res.status === 401) {
@@ -56,13 +57,12 @@ const ParentLessonsCompleted: React.FC = () => {
     return res;
   };
 
-  const loadLessonsData = async () => {
+  const loadLessonsData = async (id: number) => {
     try {
       setLoading(true);
       setError('');
 
-      // استخدام child_id = 9 كمثال
-      const res = await authFetch('/parent/children/9/sections-completion/');
+      const res = await authFetch(`/parent/children/${id}/sections-completion/`);
       if (!res.ok) {
         throw new Error('فشل في تحميل بيانات الدروس المنجزة');
       }
@@ -78,8 +78,31 @@ const ParentLessonsCompleted: React.FC = () => {
   };
 
   useEffect(() => {
-    loadLessonsData();
+    const fetchProfile = async () => {
+      try {
+        const res = await authFetch('/user/profile/parent/');
+        if (!res.ok) throw new Error('فشل في تحميل بيانات البروفايل');
+        
+        const profileData = await res.json();
+
+        if (profileData.children && profileData.children.length > 0) {
+          const firstChildId = profileData.children[0].id;
+          setChildId(firstChildId);
+          loadLessonsData(firstChildId);
+        } else {
+          setError('لا يوجد أطفال مسجلين');
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error fetching parent profile:', err);
+        setError('حدث خطأ في تحميل البروفايل');
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, []);
+
 
   if (loading) {
     return (

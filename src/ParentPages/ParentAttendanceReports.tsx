@@ -44,6 +44,7 @@ const ParentAttendanceReports: React.FC = () => {
   const [attendanceData, setAttendanceData] = useState<AttendanceData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [childId, setChildId] = useState<number | null>(null);
 
   const authFetch = async (url: string, init?: RequestInit) => {
     const token = localStorage.getItem('accessToken');
@@ -51,16 +52,16 @@ const ParentAttendanceReports: React.FC = () => {
       window.location.href = '/signin';
       return new Response(null, { status: 401 });
     }
-    
+
     let res = await fetch(url, {
       ...init,
       headers: {
         ...(init && init.headers ? init.headers : {}),
         'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
+        'Accept': 'application/json',
+      },
     });
-    
+
     if (res.status === 401) {
       localStorage.clear();
       window.location.href = '/signin';
@@ -69,32 +70,31 @@ const ParentAttendanceReports: React.FC = () => {
     return res;
   };
 
-  const loadAttendanceData = async () => {
+  const loadAttendanceData = async (id: number) => {
     try {
       setLoading(true);
       setError('');
 
-      // تحميل بيانات تقدم الدروس
-      const sectionsRes = await authFetch('/parent/children/9/sections-completion/');
+      // بيانات الدروس
+      const sectionsRes = await authFetch(`/parent/children/${id}/sections-completion/`);
       if (!sectionsRes.ok) {
         throw new Error('فشل في تحميل بيانات تقدم الدروس');
       }
       const sectionsData = await sectionsRes.json();
 
-      // تحميل بيانات نتائج الاختبارات
-      const quizRes = await authFetch('/parent/children/9/quiz-results/');
+      // بيانات الاختبارات
+      const quizRes = await authFetch(`/parent/children/${id}/quiz-results/`);
       if (!quizRes.ok) {
         throw new Error('فشل في تحميل بيانات نتائج الاختبارات');
       }
       const quizData = await quizRes.json();
 
-      // دمج البيانات
       const combinedData: AttendanceData = {
         child: sectionsData.child,
         courses: sectionsData.courses,
         quiz_results: quizData.courses,
         overall_summary: sectionsData.overall_summary,
-        quiz_summary: quizData.summary
+        quiz_summary: quizData.summary,
       };
 
       setAttendanceData(combinedData);
@@ -107,9 +107,30 @@ const ParentAttendanceReports: React.FC = () => {
   };
 
   useEffect(() => {
-    loadAttendanceData();
-  }, []);
+    const fetchProfile = async () => {
+      try {
+        const res = await authFetch('/user/profile/parent/');
+        if (!res.ok) throw new Error('فشل في تحميل البروفايل');
 
+        const profileData = await res.json();
+
+        if (profileData.children && profileData.children.length > 0) {
+          const firstChildId = profileData.children[0].id;
+          setChildId(firstChildId);
+          loadAttendanceData(firstChildId);
+        } else {
+          setError('لا يوجد أطفال مسجلين');
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error fetching parent profile:', err);
+        setError('حدث خطأ في تحميل البروفايل');
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">

@@ -106,9 +106,31 @@ const ParentChildMonitoring: React.FC = () => {
   };
 
   useEffect(() => {
-    // في التطبيق الحقيقي، ستحتاج لتحميل قائمة الأطفال أولاً
-    // للآن سنستخدم child_id = 9 كمثال
-    loadChildData(9);
+    // أولاً: نجيب البروفايل ونجيب منه الـ child id
+    const fetchProfile = async () => {
+      try {
+        const res = await authFetch('/user/profile/parent/');
+        if (!res.ok) {
+          throw new Error('فشل في تحميل بيانات البروفايل');
+        }
+        const profileData = await res.json();
+
+        if (profileData.children && profileData.children.length > 0) {
+          const firstChildId = profileData.children[0].id;
+          setSelectedChild(firstChildId);
+          loadChildData(firstChildId);
+        } else {
+          setError('لا يوجد أطفال مسجلين');
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error fetching parent profile:', err);
+        setError('حدث خطأ في تحميل بيانات البروفايل');
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, []);
 
   if (loading) {
