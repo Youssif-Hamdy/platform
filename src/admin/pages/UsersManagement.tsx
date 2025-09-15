@@ -234,6 +234,39 @@ const UsersManagement: React.FC = () => {
     }
   };
 
+  // Handle approve teacher via POST /admin-panel/approve-teacher/{teacher_id}/
+  const handleApproveTeacher = async (teacherId: number) => {
+    setActionLoading(teacherId);
+    try {
+      const accessToken = localStorage.getItem('accessToken') || localStorage.getItem('token');
+
+      if (!accessToken) {
+        toast.error('يرجى تسجيل الدخول أولاً');
+        return;
+      }
+
+      const response = await fetch(`/admin-panel/approve-teacher/${teacherId}/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        toast.success('تم تفعيل حساب المدرس بنجاح');
+        fetchUsers();
+      } else {
+        const errorData = await response.json().catch(() => ({} as any));
+        toast.error(`فشل تفعيل حساب المدرس${errorData?.message ? `: ${errorData.message}` : ''}`);
+      }
+    } catch (error) {
+      toast.error('حدث خطأ أثناء تفعيل حساب المدرس');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Handle view user
   const handleViewUser = (user: User) => {
     setSelectedUser(user);
@@ -506,6 +539,20 @@ const UsersManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
+                      {user.user_type === 'teacher' && !user.is_active && (
+                        <button
+                          onClick={() => handleApproveTeacher(user.id)}
+                          disabled={actionLoading === user.id}
+                          className="p-2 text-green-700 hover:bg-green-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="تفعيل المدرس"
+                        >
+                          {actionLoading === user.id ? (
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <UserCheck className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleViewUser(user)}
                         className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
@@ -621,6 +668,20 @@ const UsersManagement: React.FC = () => {
             {/* Actions */}
             <div className="flex items-center justify-between pt-4 border-t border-gray-200">
               <div className="flex items-center gap-2">
+                {user.user_type === 'teacher' && !user.is_active && (
+                  <button
+                    onClick={() => handleApproveTeacher(user.id)}
+                    disabled={actionLoading === user.id}
+                    className="p-2 text-green-700 hover:bg-green-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="تفعيل المدرس"
+                  >
+                    {actionLoading === user.id ? (
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <UserCheck className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={() => handleViewUser(user)}
                   className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"

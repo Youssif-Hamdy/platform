@@ -15,6 +15,7 @@ import {
   X,
   ArrowLeft,
   Trophy,
+  Star,
   Target,
   ChevronRight,
   AlertTriangle,
@@ -107,6 +108,9 @@ const StudentMyCoursesPage: React.FC = () => {
   const [loadingQuiz, setLoadingQuiz] = useState<boolean>(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [courseRating, setCourseRating] = useState<number | ''>('');
+  const [courseComment, setCourseComment] = useState<string>('');
+  const [submittingReview, setSubmittingReview] = useState<boolean>(false);
   const navigate = useNavigate();
 
   // Local progress tracking functions
@@ -350,6 +354,34 @@ const StudentMyCoursesPage: React.FC = () => {
       addToast('error', 'حدث خطأ في إرسال الإجابات');
     } finally {
       setQuizSubmitting(false);
+    }
+  };
+
+  const submitCourseReview = async () => {
+    if (!selectedCourse) return;
+    if (!courseRating) {
+      addToast('warning', 'يرجى اختيار تقييم أولاً');
+      return;
+    }
+    try {
+      setSubmittingReview(true);
+      const res = await authFetch(`/teacher/courses/${selectedCourse.id}/reviews/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: courseRating, comment: courseComment })
+      });
+      if (res && res.ok) {
+        addToast('success', 'تم إرسال تقييمك، شكراً لك!');
+        setCourseRating('');
+        setCourseComment('');
+      } else {
+        addToast('error', 'تعذر إرسال التقييم');
+      }
+    } catch (e) {
+      console.error('Error submitting course review:', e);
+      addToast('error', 'حدث خطأ أثناء إرسال التقييم');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -757,6 +789,52 @@ const StudentMyCoursesPage: React.FC = () => {
                   )}
 
                 
+                </div>
+
+                {/* Course Review */}
+                <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-blue-200/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <Star className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-blue-900">قيّم هذا الكورس</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    <div>
+                      <label className="block text-sm text-blue-700 mb-2">التقييم</label>
+                      <select
+                        className="w-full border border-blue-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        value={courseRating}
+                        onChange={(e) => setCourseRating(e.target.value ? Number(e.target.value) : '')}
+                      >
+                        <option value="">اختر من 1 إلى 5</option>
+                        <option value={1}>1</option>
+                        <option value={2}>2</option>
+                        <option value={3}>3</option>
+                        <option value={4}>4</option>
+                        <option value={5}>5</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm text-blue-700 mb-2">تعليق (اختياري)</label>
+                      <input
+                        type="text"
+                        className="w-full border border-blue-200 rounded-xl px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        placeholder="اكتب رأيك عن الكورس"
+                        value={courseComment}
+                        onChange={(e) => setCourseComment(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 text-left">
+                    <button
+                      onClick={submitCourseReview}
+                      disabled={submittingReview}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {submittingReview ? 'جار الإرسال...' : 'إرسال التقييم'}
+                    </button>
+                  </div>
                 </div>
 
              

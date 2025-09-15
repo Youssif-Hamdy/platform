@@ -13,7 +13,7 @@ export default defineConfig({
     host: true, // يسمح بالوصول من أي IP
     proxy: {
        '/admin-panel': {
-        target: 'https://educational-platform-git-a-dash-youssefs-projects-e2c35ebf.vercel.app',
+        target: 'https://educational-platform-git-main-youssefs-projects-e2c35ebf.vercel.app',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/admin-panel/, '/admin-panel'),
@@ -25,25 +25,25 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/user/, '/user'),
       },
       '/teacher': {
-        target: 'https://educational-platform-git-t-dash-youssefs-projects-e2c35ebf.vercel.app',
+        target: 'https://educational-platform-git-main-youssefs-projects-e2c35ebf.vercel.app',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/teacher/, '/teacher'),
       },
       '/student': {
-        target: 'https://educational-platform-git-s-dash-youssefs-projects-e2c35ebf.vercel.app',
+        target: 'https://educational-platform-git-main-youssefs-projects-e2c35ebf.vercel.app',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/student/, '/student'),
       },
       '/parent': {
-        target: 'https://educational-platform-rksi8yxqa-youssefs-projects-e2c35ebf.vercel.app',
+        target: 'https://educational-platform-git-main-youssefs-projects-e2c35ebf.vercel.app',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/parent/, '/parent'),
       },
       '/support': {
-        target: 'https://educational-platform-git-support-youssefs-projects-e2c35ebf.vercel.app',
+        target: 'https://educational-platform-git-main-youssefs-projects-e2c35ebf.vercel.app',
         changeOrigin: true,
         secure: true,
         rewrite: (path) => path.replace(/^\/support/, '/support'),

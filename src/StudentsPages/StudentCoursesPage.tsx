@@ -136,6 +136,7 @@ const StudentCoursesPage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [enrolling, setEnrolling] = useState<number | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  // عرض تقييمات عبر GET فقط على الكروت
 
   // دالة إضافة Toast
   const addToast = (type: Toast['type'], title: string, message: string) => {
@@ -226,10 +227,28 @@ const StudentCoursesPage: React.FC = () => {
       
       // استبعاد الكورسات المسجلة من الكورسات المتاحة
       const enrolledCourseIds = enrolledCourses.map((course: any) => course.id);
-      const availableCourses = allCourses.filter((course: Course) => !enrolledCourseIds.includes(course.id));
-      
-      setCourses(availableCourses);
-      addToast('success', 'تم بنجاح', `تم تحميل ${availableCourses.length} كورس متاح`);
+      const availableCourses: Course[] = allCourses.filter((course: Course) => !enrolledCourseIds.includes(course.id));
+
+      // جلب متوسط التقييم لكل كورس من API التقييمات
+      const withRatings = await Promise.all(
+        availableCourses.map(async (course) => {
+          try {
+            const r = await authFetch(`/teacher/courses/${course.id}/reviews/`);
+            if (r && r.ok) {
+              const reviews = await r.json();
+              const ratings: number[] = Array.isArray(reviews) ? reviews.map((rev: any) => Number(rev.rating) || 0) : [];
+              const avg = ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : 0;
+              return { ...course, rating: avg } as Course;
+            }
+          } catch (err) {
+            // ignore
+          }
+          return { ...course, rating: course.rating || 0 } as Course;
+        })
+      );
+
+      setCourses(withRatings);
+      addToast('success', 'تم بنجاح', `تم تحميل ${withRatings.length} كورس متاح`);
     } catch (e) {
       console.error('Error loading courses:', e);
       setError('حدث خطأ أثناء تحميل الكورسات');
@@ -268,6 +287,8 @@ const StudentCoursesPage: React.FC = () => {
       setEnrolling(null);
     }
   };
+
+  // لا يوجد POST للتقييم هنا وفق الطلب
 
   useEffect(() => {
     loadCourses();
@@ -384,6 +405,11 @@ const StudentCoursesPage: React.FC = () => {
                         'اشتراك'
                       )}
                     </button>
+                  </div>
+
+                  {/* عرض متوسط التقييم فقط */}
+                  <div className="mt-4 border-t border-gray-100 pt-4">
+                    <div className="text-xs text-gray-600">التقييم: {course.rating || 0}</div>
                   </div>
                 </div>
               </motion.div>

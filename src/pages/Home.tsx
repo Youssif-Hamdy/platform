@@ -93,8 +93,17 @@ interface CourseItem {
   total_quizzes: number;
   total_enrollments: number;
   average_rating: number;
+  review_count?: number;
   created_at: string;
   updated_at: string;
+}
+
+interface TeacherItem {
+  id: number;
+  full_name: string;
+  email: string;
+  date_joined: string;
+  pic: string | null;
 }
 
 interface LinkItem {
@@ -122,6 +131,11 @@ const LearningPlatform: React.FC = () => {
   const coursesPerPage = 4;
   // Atropos will handle 3D interactions; no manual tilt state needed
 
+  // Teachers
+  const [teachers, setTeachers] = useState<TeacherItem[]>([]);
+  const [teachersLoading, setTeachersLoading] = useState(false);
+  const [teachersError, setTeachersError] = useState<string | null>(null);
+
   // Check if mobile
   useEffect(() => {
     const checkMobile = () => {
@@ -132,24 +146,100 @@ const LearningPlatform: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Fetch courses from API
+  // Fetch teachers from API
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchTeachers = async () => {
       try {
-        setLoading(true);
-        const response = await fetch('/student/get-all-courses/');
-        if (!response.ok) {
-          throw new Error('Failed to fetch courses');
+        setTeachersLoading(true);
+        setTeachersError(null);
+        const res = await fetch('/teacher/get_teachers/');
+        if (!res.ok) {
+          throw new Error('Failed to fetch teachers');
         }
-        const data = await response.json();
-        setCourses(data || []);
+        const data = await res.json();
+        const list: TeacherItem[] = (Array.isArray(data) ? data : (data?.results || [data])) as TeacherItem[];
+        setTeachers(list);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'حدث خطأ في تحميل الكورسات');
-        console.error('Error fetching courses:', err);
+        setTeachersError(err instanceof Error ? err.message : 'تعذر تحميل بيانات المدرسين');
       } finally {
-        setLoading(false);
+        setTeachersLoading(false);
       }
     };
+    fetchTeachers();
+  }, []);
+
+  // Fetch courses from API
+  useEffect(() => {
+  const fetchCourses = async () => {
+  try {
+    setLoading(true);
+    const response = await fetch('/student/get-all-courses/');
+    if (!response.ok) {
+      throw new Error('Failed to fetch courses');
+    }
+    const data = await response.json();
+    const list: CourseItem[] = (data?.results || data || []) as CourseItem[];
+
+    const withRatings = await Promise.all(
+      list.map(async (course) => {
+        try {
+          // التأكد من وجود token صالح
+          const accessToken = localStorage.getItem('accessToken');
+          if (!accessToken) {
+            console.warn('No access token available, fetching without authentication');
+            return { ...course, average_rating: 0, review_count: 0 };
+          }
+
+          // استخدام endpoint مختلف - جرب هذه الخيارات
+          const reviewUrl = `/teacher/courses/${course.id}/reviews/`;
+          // أو: `/courses/${course.id}/reviews/`;
+          // أو: `/student/courses/${course.id}/reviews/`;
+
+          const r = await fetch(reviewUrl, { 
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+
+          if (r.status === 403) {
+            console.warn('Access forbidden, trying without authentication');
+            // محاولة بدون token إذا كان المسموح
+            const rWithoutAuth = await fetch(reviewUrl, {
+              headers: { 'Accept': 'application/json' }
+            });
+            
+            if (rWithoutAuth.ok) {
+              const reviews = await rWithoutAuth.json();
+              const ratings: number[] = Array.isArray(reviews) ? reviews.map((rev: any) => Number(rev.rating) || 0) : [];
+              const avgRaw = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length) : 0;
+              const avg = Number(Math.min(5, Math.max(0, avgRaw)).toFixed(1));
+              return { ...course, average_rating: avg, review_count: ratings.length };
+            }
+          }
+
+          if (r.ok) {
+            const reviews = await r.json();
+            const ratings: number[] = Array.isArray(reviews) ? reviews.map((rev: any) => Number(rev.rating) || 0) : [];
+            const avgRaw = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length) : 0;
+            const avg = Number(Math.min(5, Math.max(0, avgRaw)).toFixed(1));
+            return { ...course, average_rating: avg, review_count: ratings.length };
+          }
+        } catch (e) {
+          console.error('Error fetching reviews:', e);
+        }
+        return { ...course, average_rating: 0, review_count: 0 };
+      })
+    );
+
+    setCourses(withRatings);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'حدث خطأ في تحميل الكورسات');
+    console.error('Error fetching courses:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
     fetchCourses();
   }, []);
@@ -264,6 +354,25 @@ const LearningPlatform: React.FC = () => {
     } else {
       return `${hours} ساعات`;
     }
+  };
+
+  // عرض نجوم التقييم (5 نجوم بأسلوب يودِمي)
+  const renderStars = (avg: number) => {
+    const fullStars = Math.floor(avg);
+    const hasHalf = avg - fullStars >= 0.5;
+    return (
+      <div className="flex items-center">
+        {Array.from({ length: 5 }, (_, i) => {
+          const filled = i < fullStars || (i === fullStars && hasHalf);
+          return (
+            <FaStar
+              key={i}
+              className={`${filled ? 'text-amber-400' : 'text-gray-300'} w-4 h-4 ml-0.5`}
+            />
+          );
+        })}
+      </div>
+    );
   };
 
   // Navigation functions
@@ -598,6 +707,51 @@ const LearningPlatform: React.FC = () => {
         </div>
       </motion.section>
 
+      {/* قسم المدرسين - بسيط يعرض نبذة */}
+   <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-b from-blue-50 to-white">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="text-center mb-14">
+      <h2 className="text-4xl font-extrabold text-blue-900">مدرسونا</h2>
+      <p className="text-blue-600 mt-3 text-lg">تعرف على نخبة من أفضل المدرسين</p>
+    </div>
+
+    {teachersLoading ? (
+      <div className="flex justify-center items-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-300 border-t-blue-600"></div>
+      </div>
+    ) : teachersError ? (
+      <div className="text-center text-red-600 py-12 text-lg font-semibold">{teachersError}</div>
+    ) : teachers.length === 0 ? (
+      <div className="text-center text-blue-500 py-12 text-lg">لا توجد بيانات متاحة حالياً</div>
+    ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
+        {teachers.slice(0, 10).map((t) => (
+          <div
+            key={t.id}
+            className="bg-white border border-blue-200 rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer flex flex-col items-center text-center"
+          >
+            <div className="w-24 h-24 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center text-blue-400 mb-5">
+              {t.pic ? (
+                <img
+                  src={t.pic}
+                  alt={t.full_name}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <FaChalkboardTeacher className="w-12 h-12" />
+              )}
+            </div>
+            <h3 className="text-xl font-semibold text-blue-900 mb-2">{t.full_name}</h3>
+            <p className="text-sm text-blue-600 mb-3">انضم: {new Date(t.date_joined).toLocaleDateString('ar-EG')}</p>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</section>
+
+
       {/* قسم الإحصاءات - Responsive */}
       <section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 text-white relative overflow-hidden">
         {/* Background Pattern */}
@@ -829,6 +983,10 @@ const LearningPlatform: React.FC = () => {
                           <FaPlay className="text-sm ml-0.5" />
                         </button>
                       </div>
+                      {/* Badge: Average Rating */}
+                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-bold text-gray-800 shadow">
+                        ⭐ {course.average_rating ? course.average_rating.toFixed(1) : 'جديد'}
+                      </div>
                     </div>
 
                     <div className="p-4">
@@ -838,9 +996,18 @@ const LearningPlatform: React.FC = () => {
                       </h3>
                       
                       {/* Instructor */}
-                      <div className="flex items-center mb-3 text-sm text-gray-600">
+                      <div className="flex items-center mb-2 text-sm text-gray-600">
                         <FaUser className="text-blue-500 ml-1" />
                         <span>{course.teacher_name}</span>
+                      </div>
+
+                      {/* Rating Stars + count */}
+                      <div className="flex items-center mb-3">
+                        <span className="text-amber-500 font-semibold text-sm ml-2">
+                          {course.average_rating ? course.average_rating.toFixed(1) : 'جديد'}
+                        </span>
+                        {renderStars(course.average_rating || 0)}
+                        <span className="text-xs text-gray-500 mr-2">({course.review_count ?? 0})</span>
                       </div>
 
                       {/* Price and Action */}
