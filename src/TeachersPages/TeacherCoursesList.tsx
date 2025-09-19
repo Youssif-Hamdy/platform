@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { 
   BookOpen, 
-  Play, 
   Clock, 
   Users, 
   Star, 
@@ -15,10 +14,9 @@ import {
   Trash2,
   ArrowRight,
   ChevronLeft,
-  Filter,
-  SortDesc,
-  Calendar,
-  Award
+  Upload,
+  Archive,
+  CheckCircle
 } from 'lucide-react';
 
 const API_BASE = '';
@@ -46,13 +44,16 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('created_at');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(9);
+  const [isPublishing, setIsPublishing] = useState<{ [key: string]: boolean }>({});
+  const [isArchiving, setIsArchiving] = useState<{ [key: string]: boolean }>({});
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -75,7 +76,30 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
           throw new Error(text || 'تعذر تحميل الدورات');
         }
         const data = await res.json();
-        setCourses(Array.isArray(data) ? data : (data?.results || []));
+        const coursesData = Array.isArray(data) ? data : (data?.results || []);
+        console.log('Courses data:', coursesData);
+        console.log('First course thumbnail:', coursesData[0]?.thumbnail);
+        
+        // معالجة الصور لضمان عرضها من Cloudinary
+        const processedCourses = coursesData.map((course: any) => {
+          // معالجة خاصة للبيانات التجريبية
+          if (course.thumbnail === 'string' || !course.thumbnail || course.thumbnail.trim() === '') {
+            return {
+              ...course,
+              thumbnail: null
+            };
+          }
+          
+          return {
+            ...course,
+            thumbnail: course.thumbnail.startsWith('http') ? 
+              course.thumbnail : 
+              `https://res.cloudinary.com/dtoy7z1ou/${course.thumbnail}`
+          };
+        });
+        
+        console.log('Processed courses with thumbnails:', processedCourses);
+        setCourses(processedCourses);
       } catch (e: any) {
         setError(e?.message || 'حدث خطأ غير متوقع');
       } finally {
@@ -86,9 +110,90 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
   }, []);
 
   const handleCourseSelect = (course: Course) => {
-    setSelectedCourse(course);
     if (onOpenCourse) {
       onOpenCourse(course);
+    }
+  };
+
+  // دالة نشر الدورة
+  const handlePublishCourse = async (courseId: string | number, event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      setIsPublishing(prev => ({ ...prev, [courseId]: true }));
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setError('يجب تسجيل الدخول أولاً');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/teacher/courses/${encodeURIComponent(String(courseId))}/publish/`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStatusMessage(data.message || 'تم نشر الدورة بنجاح');
+        setShowStatusModal(true);
+        // تحديث حالة الدورة في القائمة
+        setCourses(prev => prev.map(course => 
+          course.id === courseId ? { ...course, status: 'published' } : course
+        ));
+      } else {
+        const errorData = await response.json();
+        setStatusMessage(errorData.detail || 'فشل في نشر الدورة');
+        setShowStatusModal(true);
+      }
+    } catch (error) {
+      setStatusMessage('حدث خطأ في الاتصال بالخادم');
+      setShowStatusModal(true);
+    } finally {
+      setIsPublishing(prev => ({ ...prev, [courseId]: false }));
+    }
+  };
+
+  // دالة أرشفة الدورة
+  const handleArchiveCourse = async (courseId: string | number, event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      setIsArchiving(prev => ({ ...prev, [courseId]: true }));
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setError('يجب تسجيل الدخول أولاً');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/teacher/courses/${encodeURIComponent(String(courseId))}/archive/`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStatusMessage(data.message || 'تم أرشفة الدورة بنجاح');
+        setShowStatusModal(true);
+        // تحديث حالة الدورة في القائمة
+        setCourses(prev => prev.map(course => 
+          course.id === courseId ? { ...course, status: 'archived' } : course
+        ));
+      } else {
+        const errorData = await response.json();
+        setStatusMessage(errorData.detail || 'فشل في أرشفة الدورة');
+        setShowStatusModal(true);
+      }
+    } catch (error) {
+      setStatusMessage('حدث خطأ في الاتصال بالخادم');
+      setShowStatusModal(true);
+    } finally {
+      setIsArchiving(prev => ({ ...prev, [courseId]: false }));
     }
   };
 
@@ -182,126 +287,95 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Header Section */}
-      <div className="bg-white/95 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-40 shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            {/* Title Section */}
-            <div className="flex items-center space-x-4 space-x-reverse">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-2xl flex items-center justify-center shadow-lg">
-                <BookOpen className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      {/* Simple Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                  دوراتي التعليمية
-                </h1>
-                <p className="text-gray-600 text-base mt-1">إدارة وتنظيم المحتوى التعليمي</p>
+                <h1 className="text-xl font-bold text-gray-900">دوراتي التعليمية</h1>
+                <p className="text-sm text-gray-600">{filteredAndSortedCourses.length} دورة</p>
               </div>
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center space-x-4 space-x-reverse">
+            
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => window.location.href = '/dashboard'}
-                className="flex items-center space-x-3 space-x-reverse bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900 px-5 py-3 rounded-2xl font-semibold transition-all duration-300 hover:scale-105"
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <ArrowRight className="w-5 h-5" />
-                <span>العودة للداشبورد</span>
+                <ArrowRight className="w-4 h-4" />
+                <span>العودة</span>
               </button>
-              <button className="flex items-center space-x-3 space-x-reverse bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:via-blue-800 hover:to-indigo-800 text-white px-6 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <Plus className="w-5 h-5" />
+              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                <Plus className="w-4 h-4" />
                 <span>دورة جديدة</span>
               </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Search and Filter Bar */}
-          <div className="mt-6 space-y-4">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Search */}
-              <div className="relative flex-1">
-                <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="البحث في الدورات..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pr-12 pl-4 py-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/90 backdrop-blur-sm placeholder-gray-400 text-base"
-                />
-              </div>
-
-              {/* Filter and Sort Controls */}
-              <div className="flex items-center space-x-3 space-x-reverse">
-                <div className="flex items-center space-x-2 space-x-reverse bg-white/90 backdrop-blur-sm border border-gray-200 rounded-2xl p-1">
-                  <Filter className="w-4 h-4 text-gray-500 mr-2" />
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="bg-transparent border-0 focus:ring-0 font-medium text-gray-700 pr-2"
-                  >
-                    <option value="all">جميع الدورات</option>
-                    <option value="published">منشورة</option>
-                    <option value="draft">مسودات</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center space-x-2 space-x-reverse bg-white/90 backdrop-blur-sm border border-gray-200 rounded-2xl p-1">
-                  <SortDesc className="w-4 h-4 text-gray-500 mr-2" />
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-transparent border-0 focus:ring-0 font-medium text-gray-700 pr-2"
-                  >
-                    <option value="created_at">الأحدث</option>
-                    <option value="title">الاسم</option>
-                    <option value="students">عدد الطلاب</option>
-                    <option value="rating">التقييم</option>
-                  </select>
-                </div>
-
-                {/* View Mode Toggle */}
-                <div className="flex bg-gray-100 rounded-2xl p-1 shadow-inner">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-3 rounded-xl transition-all duration-300 ${
-                      viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <Grid3X3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-3 rounded-xl transition-all duration-300 ${
-                      viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+      {/* Search and Filters */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="البحث في الدورات..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-right"
+              />
             </div>
 
-            {/* Stats Bar */}
-            <div className="flex items-center justify-between bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-2xl px-6 py-4">
-              <div className="flex items-center space-x-6 space-x-reverse text-sm">
-                <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                  <BookOpen className="w-4 h-4 text-blue-500" />
-                  <span className="font-medium">{filteredAndSortedCourses.length} دورة</span>
-                </div>
-                <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                  <Users className="w-4 h-4 text-green-500" />
-                  <span className="font-medium">{courses.reduce((acc, course) => acc + (course.students_count || 0), 0)} طالب</span>
-                </div>
-                <div className="flex items-center space-x-2 space-x-reverse text-gray-600">
-                  <Award className="w-4 h-4 text-yellow-500" />
-                  <span className="font-medium">
-                    {courses.filter(c => c.status === 'published').length} منشورة
-                  </span>
-                </div>
-              </div>
-              <div className="text-sm text-gray-500">
-                صفحة {currentPage} من {totalPages}
+            {/* Filters */}
+            <div className="flex items-center gap-3">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
+              >
+                <option value="all">جميع الدورات</option>
+                <option value="published">منشورة</option>
+                <option value="draft">مسودات</option>
+              </select>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right"
+              >
+                <option value="created_at">الأحدث</option>
+                <option value="title">الاسم</option>
+                <option value="students">عدد الطلاب</option>
+                <option value="rating">التقييم</option>
+              </select>
+
+              {/* View Mode Toggle */}
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -309,41 +383,41 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6">
         {paginatedCourses.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-32 h-32 bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
-              <BookOpen className="w-16 h-16 text-blue-600" />
+          <div className="text-center py-16">
+            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <BookOpen className="w-12 h-12 text-blue-600" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
               {searchQuery || filterStatus !== 'all' ? 'لا توجد نتائج' : 'لا توجد دورات بعد'}
             </h3>
-            <p className="text-gray-600 mb-8 max-w-lg mx-auto text-lg leading-relaxed">
+            <p className="text-gray-600 mb-6 max-w-md mx-auto leading-relaxed">
               {searchQuery || filterStatus !== 'all' 
                 ? 'جرب البحث بكلمات مختلفة أو غير الفلتر' 
-                : 'ابدأ بإنشاء دورة جديدة لطلابك وشارك معرفتك مع العالم'
+                : 'ابدأ بإنشاء دورة جديدة لطلابك'
               }
             </p>
             {!searchQuery && filterStatus === 'all' && (
-              <button className="inline-flex items-center space-x-3 space-x-reverse bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white px-8 py-4 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <Plus className="w-5 h-5" />
+              <button className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                <Plus className="w-4 h-4" />
                 <span>إنشاء دورة جديدة</span>
               </button>
             )}
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div className={viewMode === 'grid' 
-              ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8' 
-              : 'space-y-6'
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
+              : 'space-y-4'
             }>
-              {paginatedCourses.map((course, index) => (
+              {paginatedCourses.map((course) => (
                 <div
                   key={course.id}
-                  className={`group cursor-pointer transform hover:scale-105 transition-all duration-500 ${
+                  className={`group cursor-pointer transition-all duration-300 ${
                     viewMode === 'grid' 
-                      ? 'bg-white/95 backdrop-blur-xl rounded-3xl border border-gray-200/60 shadow-lg hover:shadow-2xl overflow-hidden' 
-                      : 'bg-white/95 backdrop-blur-xl rounded-2xl border border-gray-200/60 shadow-lg hover:shadow-xl'
+                      ? 'bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md overflow-hidden' 
+                      : 'bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md'
                   }`}
                   onClick={() => handleCourseSelect(course)}
                 >
@@ -351,85 +425,118 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
                     // Grid View
                     <>
                       {/* Course Thumbnail */}
-                      <div className="relative h-52 bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 overflow-hidden">
+                      <div className="relative h-40 bg-gray-100 overflow-hidden">
                         {course.thumbnail ? (
-                          <img 
-                            src={course.thumbnail} 
+                          <img
+                            src={course.thumbnail}
                             alt={course.title}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              console.log('Image failed to load:', e.currentTarget.src);
+                              e.currentTarget.style.display = 'none';
+                              const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (nextElement) {
+                                nextElement.style.display = 'flex';
+                              }
+                            }}
+                            onLoad={(e) => {
+                              console.log('Image loaded successfully:', e.currentTarget.src);
+                              const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (nextElement) {
+                                nextElement.style.display = 'none';
+                              }
+                            }}
+                            loading="lazy"
                           />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <BookOpen className="w-20 h-20 text-blue-500" />
-                          </div>
-                        )}
+                        ) : null}
+                        <div className="w-full h-full flex items-center justify-center" style={{ display: course.thumbnail ? 'none' : 'flex' }}>
+                          <BookOpen className="w-12 h-12 text-gray-400" />
+                        </div>
                         
                         {/* Status Badge */}
-                        <div className="absolute top-4 right-4">
-                          <span className={`px-4 py-2 rounded-full text-sm font-semibold shadow-lg ${
+                        <div className="absolute top-3 right-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             course.status === 'published' 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-amber-500 text-white'
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-amber-100 text-amber-700'
                           }`}>
                             {course.status === 'published' ? 'منشور' : 'مسودة'}
                           </span>
                         </div>
-
-                        {/* Play Button Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center">
-                          <div className="w-20 h-20 bg-white/95 rounded-full flex items-center justify-center shadow-2xl transform scale-75 group-hover:scale-100 transition-transform duration-300">
-                            <Play className="w-10 h-10 text-blue-600 ml-1" />
-                          </div>
-                        </div>
                       </div>
 
                       {/* Course Content */}
-                      <div className="p-7">
-                        <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors duration-300 leading-tight">
+                      <div className="p-4">
+                        <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors text-right leading-tight">
                           {course.title}
                         </h3>
-                        <p className="text-gray-600 text-sm mb-5 line-clamp-3 leading-relaxed">
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed text-right">
                           {course.description || 'لا يوجد وصف للدورة'}
                         </p>
 
                         {/* Course Stats */}
-                        <div className="grid grid-cols-3 gap-3 mb-6">
-                          <div className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-3 py-2 rounded-xl">
-                            <Clock className="w-4 h-4 text-blue-500" />
-                            <span className="font-medium text-sm">{course.duration_hours || 0} ساعة</span>
+                        <div className="flex items-center gap-4 mb-4 text-sm">
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Clock className="w-4 h-4" />
+                            <span>{course.duration_hours || 0} ساعة</span>
                           </div>
-                          <div className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-3 py-2 rounded-xl">
-                            <Users className="w-4 h-4 text-green-500" />
-                            <span className="font-medium text-sm">{course.students_count || 0}</span>
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Users className="w-4 h-4" />
+                            <span>{course.students_count || 0}</span>
                           </div>
-                          {course.rating ? (
-                            <div className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-3 py-2 rounded-xl">
+                          {course.rating && (
+                            <div className="flex items-center gap-1 text-gray-600">
                               <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                              <span className="font-medium text-sm">{course.rating}</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-3 py-2 rounded-xl">
-                              <Calendar className="w-4 h-4 text-purple-500" />
-                              <span className="font-medium text-sm">جديد</span>
+                              <span>{course.rating}</span>
                             </div>
                           )}
                         </div>
 
                         {/* Action Buttons */}
                         <div className="flex items-center justify-between">
-                          <button className="flex items-center space-x-2 space-x-reverse text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors duration-300">
+                          <button className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors">
                             <span>عرض الدورة</span>
                             <ChevronRight className="w-4 h-4" />
                           </button>
                           
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <button className="p-2 text-gray-400 hover:text-blue-600 rounded-xl hover:bg-blue-50 transition-all duration-300">
+                          <div className="flex items-center gap-1">
+                            {course.status !== 'published' && (
+                              <button 
+                                onClick={(e) => handlePublishCourse(course.id, e)}
+                                disabled={isPublishing[course.id]}
+                                className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="نشر الدورة"
+                              >
+                                {isPublishing[course.id] ? (
+                                  <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Upload className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+                            
+                            {course.status === 'published' && (
+                              <button 
+                                onClick={(e) => handleArchiveCourse(course.id, e)}
+                                disabled={isArchiving[course.id]}
+                                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="أرشفة الدورة"
+                              >
+                                {isArchiving[course.id] ? (
+                                  <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Archive className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+                            
+                            <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-all">
                               <Eye className="w-4 h-4" />
                             </button>
-                            <button className="p-2 text-gray-400 hover:text-green-600 rounded-xl hover:bg-green-50 transition-all duration-300">
+                            <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition-all">
                               <Edit className="w-4 h-4" />
                             </button>
-                            <button className="p-2 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-all duration-300">
+                            <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -438,71 +545,116 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
                     </>
                   ) : (
                     // List View
-                    <div className="flex items-center space-x-6 space-x-reverse p-6">
+                   <div className="flex items-center gap-4 p-4">
                       {/* Thumbnail */}
-                      <div className="w-24 h-24 bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden shadow-lg">
+                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {course.thumbnail ? (
-                          <img 
-                            src={course.thumbnail} 
+                          <img
+                            src={course.thumbnail}
                             alt={course.title}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.log('Image failed to load:', e.currentTarget.src);
+                              e.currentTarget.style.display = 'none';
+                              const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (nextElement) {
+                                nextElement.style.display = 'flex';
+                              }
+                            }}
+                            onLoad={(e) => {
+                              console.log('Image loaded successfully:', e.currentTarget.src);
+                              const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (nextElement) {
+                                nextElement.style.display = 'none';
+                              }
+                            }}
                           />
-                        ) : (
-                          <BookOpen className="w-12 h-12 text-blue-500" />
-                        )}
+                        ) : null}
+                        <div className="w-full h-full flex items-center justify-center" style={{ display: course.thumbnail ? 'none' : 'flex' }}>
+                          <BookOpen className="w-8 h-8 text-gray-400" />
+                        </div>
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 space-y-3">
-                            <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
-                              {course.title}
-                            </h3>
-                            <p className="text-gray-600 text-sm line-clamp-2 leading-relaxed">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors text-right">
+                                {course.title}
+                              </h3>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                course.status === 'published' 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {course.status === 'published' ? 'منشور' : 'مسودة'}
+                              </span>
+                            </div>
+                            <p className="text-gray-600 text-sm mb-3 line-clamp-1 leading-relaxed text-right">
                               {course.description || 'لا يوجد وصف للدورة'}
                             </p>
                             
                             {/* Stats */}
-                            <div className="flex items-center space-x-6 space-x-reverse text-sm">
-                              <div className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-3 py-1 rounded-lg">
-                                <Clock className="w-3 h-3 text-blue-500" />
-                                <span className="font-medium">{course.duration_hours || 0} ساعة</span>
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                <span>{course.duration_hours || 0} ساعة</span>
                               </div>
-                              <div className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-3 py-1 rounded-lg">
-                                <Users className="w-3 h-3 text-green-500" />
-                                <span className="font-medium">{course.students_count || 0} طالب</span>
+                              <div className="flex items-center gap-1">
+                                <Users className="w-4 h-4" />
+                                <span>{course.students_count || 0} طالب</span>
                               </div>
                               {course.rating && (
-                                <div className="flex items-center space-x-2 space-x-reverse bg-gray-50 px-3 py-1 rounded-lg">
-                                  <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                                  <span className="font-medium">{course.rating}</span>
+                                <div className="flex items-center gap-1">
+                                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                  <span>{course.rating}</span>
                                 </div>
                               )}
                             </div>
                           </div>
 
-                          {/* Status and Actions */}
-                          <div className="flex items-center space-x-4 space-x-reverse">
-                            <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                              course.status === 'published' 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-amber-100 text-amber-700'
-                            }`}>
-                              {course.status === 'published' ? 'منشور' : 'مسودة'}
-                            </span>
+                          {/* Actions */}
+                          <div className="flex items-center gap-1">
+                            {course.status !== 'published' && (
+                              <button 
+                                onClick={(e) => handlePublishCourse(course.id, e)}
+                                disabled={isPublishing[course.id]}
+                                className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="نشر الدورة"
+                              >
+                                {isPublishing[course.id] ? (
+                                  <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Upload className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
                             
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                              <button className="p-2 text-gray-400 hover:text-blue-600 rounded-xl hover:bg-blue-50 transition-all duration-300">
-                                <Eye className="w-4 h-4" />
+                            {course.status === 'published' && (
+                              <button 
+                                onClick={(e) => handleArchiveCourse(course.id, e)}
+                                disabled={isArchiving[course.id]}
+                                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="أرشفة الدورة"
+                              >
+                                {isArchiving[course.id] ? (
+                                  <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Archive className="w-4 h-4" />
+                                )}
                               </button>
-                              <button className="p-2 text-gray-400 hover:text-green-600 rounded-xl hover:bg-green-50 transition-all duration-300">
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button className="p-2 text-gray-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-all duration-300">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
+                            )}
+                            
+                            <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-all">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition-all">
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -514,25 +666,25 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center space-x-2 space-x-reverse pt-8">
+              <div className="flex items-center justify-center gap-2 pt-6">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="flex items-center space-x-2 space-x-reverse px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
                   <span>السابق</span>
                 </button>
 
-                <div className="flex items-center space-x-1 space-x-reverse">
+                <div className="flex items-center gap-1">
                   {getPaginationRange().map((page, index) => (
                     <button
                       key={index}
                       onClick={() => typeof page === 'number' && setCurrentPage(page)}
                       disabled={page === '...'}
-                      className={`px-4 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                      className={`px-3 py-2 rounded-lg font-medium transition-colors ${
                         page === currentPage
-                          ? 'bg-blue-600 text-white shadow-lg'
+                          ? 'bg-blue-600 text-white'
                           : typeof page === 'number'
                           ? 'bg-white border border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300'
                           : 'bg-transparent text-gray-400 cursor-not-allowed'
@@ -546,7 +698,7 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="flex items-center space-x-2 space-x-reverse px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <span>التالي</span>
                   <ChevronLeft className="w-4 h-4" />
@@ -556,6 +708,27 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
           </div>
         )}
       </div>
+
+      {/* Status Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">تم بنجاح</h3>
+              <p className="text-gray-600 mb-4 text-right leading-relaxed">{statusMessage}</p>
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                موافق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

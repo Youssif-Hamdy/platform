@@ -16,10 +16,12 @@ import {
   Star,
   BarChart3,
   ArrowRight,
-  Play,
   Award,
   Menu,
-  X
+  X,
+  Upload,
+  Archive,
+  CheckCircle
 } from 'lucide-react';
 
 const API_BASE = '';
@@ -53,6 +55,15 @@ interface DetailedSection extends Section {
   };
 }
 
+interface Course {
+  id: number | string;
+  title: string;
+  description?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface Props {
   courseId: string | number;
   courseTitle?: string;
@@ -65,6 +76,11 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
   const [error, setError] = useState('');
   const [selectedSection, setSelectedSection] = useState<DetailedSection | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [course, setCourse] = useState<Course | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
   useEffect(() => {
     const run = async () => {
@@ -76,6 +92,22 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
           setLoading(false);
           return;
         }
+        
+        // جلب معلومات الدورة
+        const courseRes = await fetch(`${API_BASE}/teacher/courses/${encodeURIComponent(String(courseId))}/`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+        
+        if (courseRes.ok) {
+          const courseData = await courseRes.json();
+          setCourse(courseData);
+        }
+        
+        // جلب أقسام الدورة
         const res = await fetch(`${API_BASE}/teacher/courses/${encodeURIComponent(String(courseId))}/sections/`, {
           method: 'GET',
           headers: {
@@ -137,6 +169,86 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
       if (detailedSection) {
         setSelectedSection({ ...section, ...detailedSection });
       }
+    }
+  };
+
+  // دالة نشر الدورة
+  const handlePublishCourse = async () => {
+    try {
+      setIsPublishing(true);
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setError('يجب تسجيل الدخول أولاً');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/teacher/courses/${encodeURIComponent(String(courseId))}/publish/`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStatusMessage(data.message || 'تم نشر الدورة بنجاح');
+        setShowStatusModal(true);
+        // تحديث حالة الدورة
+        if (course) {
+          setCourse({ ...course, status: 'published' });
+        }
+      } else {
+        const errorData = await response.json();
+        setStatusMessage(errorData.detail || 'فشل في نشر الدورة');
+        setShowStatusModal(true);
+      }
+    } catch (error) {
+      setStatusMessage('حدث خطأ في الاتصال بالخادم');
+      setShowStatusModal(true);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  // دالة أرشفة الدورة
+  const handleArchiveCourse = async () => {
+    try {
+      setIsArchiving(true);
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setError('يجب تسجيل الدخول أولاً');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/teacher/courses/${encodeURIComponent(String(courseId))}/archive/`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStatusMessage(data.message || 'تم أرشفة الدورة بنجاح');
+        setShowStatusModal(true);
+        // تحديث حالة الدورة
+        if (course) {
+          setCourse({ ...course, status: 'archived' });
+        }
+      } else {
+        const errorData = await response.json();
+        setStatusMessage(errorData.detail || 'فشل في أرشفة الدورة');
+        setShowStatusModal(true);
+      }
+    } catch (error) {
+      setStatusMessage('حدث خطأ في الاتصال بالخادم');
+      setShowStatusModal(true);
+    } finally {
+      setIsArchiving(false);
     }
   };
 
@@ -285,24 +397,80 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {courseTitle || 'تفاصيل الكورس'}
-              </h1>
-              <p className="text-gray-600 mt-1">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {course?.title || courseTitle || 'تفاصيل الكورس'}
+                </h1>
+                {course?.status && (
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    course.status === 'published' 
+                      ? 'bg-green-100 text-green-700' 
+                      : course.status === 'archived'
+                      ? 'bg-gray-100 text-gray-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {course.status === 'published' ? 'منشور' : 
+                     course.status === 'archived' ? 'مؤرشف' : 'مسودة'}
+                  </span>
+                )}
+              </div>
+              <p className="text-gray-600 text-sm">
                 {selectedSection ? `القسم: ${selectedSection.title}` : 'اختر قسماً لعرض محتواه'}
               </p>
             </div>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => window.location.href = '/dashboard'}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              <ArrowRight className="w-4 h-4" />
-              <span>العودة للداشبورد</span>
-            </motion.button>
+            
+            <div className="flex items-center gap-3">
+              {/* أزرار النشر والأرشفة */}
+              {course?.status !== 'published' && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handlePublishCourse}
+                  disabled={isPublishing}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isPublishing ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {isPublishing ? 'جاري النشر...' : 'نشر الدورة'}
+                  </span>
+                </motion.button>
+              )}
+              
+              {course?.status === 'published' && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleArchiveCourse}
+                  disabled={isArchiving}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isArchiving ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Archive className="w-4 h-4" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {isArchiving ? 'جاري الأرشفة...' : 'أرشفة الدورة'}
+                  </span>
+                </motion.button>
+              )}
+              
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => window.location.href = '/dashboard'}
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <ArrowRight className="w-4 h-4" />
+                <span className="text-sm font-medium">العودة للداشبورد</span>
+              </motion.button>
+            </div>
           </div>
         </div>
 
@@ -359,29 +527,29 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
 
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
                       <Clock className="w-4 h-4 text-blue-500" />
                       <span className="text-sm font-medium text-gray-600">المدة</span>
                     </div>
                     <p className="text-lg font-bold text-gray-900">{selectedSection.duration_minutes || 0} دقيقة</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
                       <Eye className="w-4 h-4 text-green-500" />
                       <span className="text-sm font-medium text-gray-600">المشاهدات</span>
                     </div>
                     <p className="text-lg font-bold text-gray-900">{selectedSection.total_views || 0}</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
                       <BarChart3 className="w-4 h-4 text-purple-500" />
                       <span className="text-sm font-medium text-gray-600">الترتيب</span>
                     </div>
                     <p className="text-lg font-bold text-gray-900">{selectedSection.order || 0}</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
                       <FileText className="w-4 h-4 text-orange-500" />
                       <span className="text-sm font-medium text-gray-600">النوع</span>
                     </div>
@@ -400,10 +568,10 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                   <div className="bg-white rounded-xl border border-gray-200 p-6">
                     <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                       <FileText className="w-5 h-5 text-green-500" />
-                      المحتوى النصي
+                      <span>المحتوى النصي</span>
                     </h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    <div className="bg-gray-50 rounded-lg p-6">
+                      <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-right">
                         {selectedSection.content}
                       </div>
                     </div>
@@ -415,54 +583,59 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                   <div className="bg-white rounded-xl border border-gray-200 p-6">
                     <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                       <Video className="w-5 h-5 text-blue-500" />
-                      الفيديو التعليمي
+                      <span>الفيديو التعليمي</span>
                     </h3>
-                    <div className="bg-gray-100 rounded-lg aspect-video flex items-center justify-center">
-                      <div className="text-center">
-                        <Play className="w-16 h-16 text-gray-400 mx-auto mb-3" />
-                        <p className="text-gray-600">معاينة الفيديو</p>
-                        <p className="text-sm text-gray-500 mt-1">انقر للتشغيل</p>
-                      </div>
+                    <div className="bg-gray-100 rounded-lg aspect-video overflow-hidden">
+                      <video
+                        src={`https://res.cloudinary.com/dtoy7z1ou/${selectedSection.video_file}`}
+                        controls
+                        className="w-full h-full object-cover rounded-lg"
+                      />
                     </div>
                   </div>
                 )}
-                
+
+
                 {/* PDF Content */}
                 {selectedSection.pdf_file && (
                   <div className="bg-white rounded-xl border border-gray-200 p-6">
                     <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                       <File className="w-5 h-5 text-red-500" />
-                      ملف PDF
+                      <span>ملف PDF</span>
                     </h3>
                     <div className="flex items-center justify-center p-8 bg-gray-50 rounded-lg">
-                      <motion.button 
+                      <motion.a 
                         whileHover={{ scale: 1.05 }}
+                        href={`https://res.cloudinary.com/dtoy7z1ou/${selectedSection.pdf_file.replace("upload/", "upload/fl_attachment/")}`}
+                        download
+                        rel="noopener noreferrer"
                         className="flex items-center gap-3 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg text-lg transition-colors"
                       >
                         <Download className="w-5 h-5" />
                         <span>تحميل الملف</span>
-                      </motion.button>
+                      </motion.a>
                     </div>
                   </div>
                 )}
+
 
                 {/* Quiz Section */}
                 {selectedSection.quiz && (
                   <div className="bg-white rounded-xl border border-gray-200 p-6">
                     <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">
                       <HelpCircle className="w-5 h-5 text-blue-600" />
-                      معلومات الاختبار
+                      <span>معلومات الاختبار</span>
                     </h3>
                     
-                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-4">
-                      <h4 className="font-semibold text-gray-900 mb-1">{selectedSection.quiz.title}</h4>
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-6">
+                      <h4 className="font-semibold text-gray-900 mb-2">{selectedSection.quiz.title}</h4>
                       {selectedSection.quiz.description && (
-                        <p className="text-gray-700 text-sm">{selectedSection.quiz.description}</p>
+                        <p className="text-gray-700 text-sm leading-relaxed">{selectedSection.quiz.description}</p>
                       )}
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Clock className="w-4 h-4 text-blue-500" />
                           <span className="text-sm font-medium text-gray-600">الوقت المحدد</span>
@@ -470,7 +643,7 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                         <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.time_limit_minutes} دقيقة</p>
                       </div>
                       
-                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Award className="w-4 h-4 text-green-500" />
                           <span className="text-sm font-medium text-gray-600">درجة النجاح</span>
@@ -478,7 +651,7 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                         <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.passing_score}%</p>
                       </div>
                       
-                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Users className="w-4 h-4 text-purple-500" />
                           <span className="text-sm font-medium text-gray-600">عدد المحاولات</span>
@@ -486,7 +659,7 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                         <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.total_attempts || 0}</p>
                       </div>
                       
-                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Star className="w-4 h-4 text-yellow-500" />
                           <span className="text-sm font-medium text-gray-600">متوسط الدرجات</span>
@@ -494,7 +667,7 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                         <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.average_score || '0%'}</p>
                       </div>
                       
-                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <HelpCircle className="w-4 h-4 text-indigo-500" />
                           <span className="text-sm font-medium text-gray-600">عدد الأسئلة</span>
@@ -502,7 +675,7 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                         <p className="text-xl font-bold text-gray-900">{selectedSection.quiz.question_count || 0}</p>
                       </div>
                       
-                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <BarChart3 className="w-4 h-4 text-orange-500" />
                           <span className="text-sm font-medium text-gray-600">الحد الأقصى للمحاولات</span>
@@ -525,6 +698,41 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
           )}
         </div>
       </div>
+
+      {/* Status Modal */}
+      <AnimatePresence>
+        {showStatusModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowStatusModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">تم بنجاح</h3>
+                <p className="text-gray-600 mb-6">{statusMessage}</p>
+                <button
+                  onClick={() => setShowStatusModal(false)}
+                  className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+                >
+                  موافق
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

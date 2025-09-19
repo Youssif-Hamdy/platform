@@ -155,25 +155,30 @@ const TeacherCreateCourse: React.FC = () => {
             </div>
 
             {/* الصورة المصغرة */}
-            <div>
-              <label htmlFor="thumbnail" className="block text-sm font-semibold text-blue-900 mb-2">
-                الصورة المصغرة
-              </label>
-              <input
-                id="thumbnail"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setThumbnail(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-blue-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer border-2 border-dashed border-blue-300 rounded-xl p-4"
-              />
-              {thumbnailPreview && (
-                <img
-                  src={thumbnailPreview}
-                  alt="معاينة الصورة"
-                  className="mt-3 max-h-32 rounded-lg object-contain border border-blue-300 shadow-sm"
-                />
-              )}
-            </div>
+           <div>
+  <label htmlFor="thumbnail" className="block text-sm font-semibold text-blue-900 mb-2">
+    الصورة المصغرة
+  </label>
+  <input
+    id="thumbnail"
+    type="file"
+    accept="image/*"
+    onChange={(e) => setThumbnail(e.target.files?.[0] || null)}
+    className="block w-full text-sm text-blue-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition cursor-pointer border-2 border-dashed border-blue-300 rounded-xl p-4"
+  />
+
+  {/* المعاينة */}
+  {thumbnailPreview && (
+    <div className="mt-3 relative w-32 h-32 border border-blue-300 rounded-lg overflow-hidden shadow-sm">
+      <img
+        src={`https://res.cloudinary.com/dtoy7z1ou/${thumbnailPreview}`}
+        alt="معاينة الصورة"
+        className="w-full h-full object-cover"
+      />
+    </div>
+  )}
+</div>
+
 
             {/* الإعدادات */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

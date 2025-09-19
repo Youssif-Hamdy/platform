@@ -29,9 +29,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile }) => {
     return localStorage.getItem('displayName') || profile?.username || 'المستخدم';
   };
 
-  const avatarUrl = () => {
-    return (profile && profile.profile_picture) || localStorage.getItem('profileImageUrl') || '';
-  };
+const avatarUrl = () => {
+  if (profile?.profile_picture) {
+    // ضيف لينك Cloudinary الأساسي
+    return `https://res.cloudinary.com/dtoy7z1ou/${profile.profile_picture}`;
+  }
+  return localStorage.getItem('profileImageUrl') || '';
+};
+
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>

@@ -41,6 +41,60 @@ interface Course {
   sections: CourseSection[];
   progress?: number;
   completed_sections?: number;
+  analytics?: CourseAnalytics;
+}
+
+interface CourseAnalytics {
+  user_type: string;
+  course_info: {
+    id: number;
+    title: string;
+    teacher_name: string;
+    start_date: string;
+  };
+  progress_overview: {
+    progress_percentage: number;
+    sections_completed: number;
+    total_sections: number;
+    quizzes_passed: number;
+    total_time_spent_minutes: number;
+    estimated_time_remaining_minutes: number | null;
+    enrollment_date: string;
+    completion_date: string | null;
+  };
+  section_progress: SectionProgress[];
+  quiz_performance: QuizPerformance[];
+  recent_activity: RecentActivity[];
+}
+
+interface SectionProgress {
+  section_id: number;
+  section_title: string;
+  is_completed: boolean;
+  first_viewed: string;
+  last_viewed: string;
+  time_spent_minutes: number;
+  order: number;
+}
+
+interface QuizPerformance {
+  quiz_id: number;
+  quiz_title: string;
+  section_title: string;
+  attempts_count: number;
+  best_score: number | null;
+  latest_score: number | null;
+  is_passed: boolean;
+  last_attempt: string | null;
+}
+
+interface RecentActivity {
+  type: string;
+  title: string;
+  time: string;
+  action: string;
+  completed?: boolean;
+  passed?: boolean;
 }
 
 interface CourseSection {
@@ -111,39 +165,89 @@ const StudentMyCoursesPage: React.FC = () => {
   const [courseRating, setCourseRating] = useState<number | ''>('');
   const [courseComment, setCourseComment] = useState<string>('');
   const [submittingReview, setSubmittingReview] = useState<boolean>(false);
+  const [loadingAnalytics, setLoadingAnalytics] = useState<boolean>(false);
+  const [loadingCourseAnalytics, setLoadingCourseAnalytics] = useState<boolean>(false);
+
   const navigate = useNavigate();
 
-  // Local progress tracking functions
-  const getLocalProgress = (courseId: number) => {
-    const progress = localStorage.getItem(`course_progress_${courseId}`);
-    return progress ? JSON.parse(progress) : { completedSections: [], lastViewedSection: null };
+  // Helper: prefer analytics progress, then server progress, then derive from sections
+  const getServerOrDerivedProgress = (course: Course) => {
+    if (course.analytics?.progress_overview?.progress_percentage !== undefined) {
+      return course.analytics.progress_overview.progress_percentage;
+    }
+    if (typeof course.progress === 'number') return course.progress;
+    const total = (course.sections?.length || course.total_sections || 0);
+    if (total === 0) return 0;
+    const completed = (course.sections?.filter(s => s.is_completed).length || course.completed_sections || 0);
+    return Math.round((completed / total) * 100);
   };
 
-  const markSectionAsCompleted = (courseId: number, sectionId: number) => {
-    const progress = getLocalProgress(courseId);
-    if (!progress.completedSections.includes(sectionId)) {
-      progress.completedSections.push(sectionId);
-      localStorage.setItem(`course_progress_${courseId}`, JSON.stringify(progress));
-      addToast('success', 'تم تحديد القسم كمكتمل!');
+  // Load course analytics
+  const loadCourseAnalytics = async (courseId: number) => {
+    try {
+      setLoadingAnalytics(true);
+      const res = await authFetch(`/teacher/analytics/courses/${courseId}/`);
+      
+      if (res && res.ok) {
+        const data = await res.json();
+        setSelectedCourse(prev => prev ? { ...prev, analytics: data } : prev);
+        addToast('success', 'تم تحميل بيانات التقدم بنجاح');
+      } else {
+        addToast('error', 'فشل في تحميل بيانات التقدم');
+      }
+    } catch (e) {
+      console.error('Error loading course analytics:', e);
+      addToast('error', 'حدث خطأ في تحميل بيانات التقدم');
+    } finally {
+      setLoadingAnalytics(false);
     }
   };
 
-  const isSectionCompleted = (courseId: number, sectionId: number) => {
-    const progress = getLocalProgress(courseId);
-    return progress.completedSections.includes(sectionId);
+  const markSectionAsCompleted = async (_courseId: number, sectionId: number) => {
+    try {
+      const res = await authFetch(`/student/sections/${sectionId}/complete/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_completed: true })
+      });
+
+      if (res && res.ok) {
+        const responseData = await res.json();
+        console.log('Section completion response:', responseData);
+        
+        if (responseData.status === 'success' && responseData.data?.is_completed) {
+          addToast('success', 'تم تحديد القسم كمكتمل!');
+          // Optimistically update selected course/section in state
+          setSelectedCourse(prev => {
+            if (!prev) return prev;
+            const updatedSections = prev.sections?.map(s => (
+              s.id === sectionId ? { ...s, is_completed: true } : s
+            )) || [];
+            const completedCount = updatedSections.filter(s => s.is_completed).length;
+            return {
+              ...prev,
+              sections: updatedSections,
+              completed_sections: completedCount,
+              progress: getServerOrDerivedProgress({ ...prev, sections: updatedSections, completed_sections: completedCount })
+            };
+          });
+          setSelectedSection(prev => (prev ? { ...prev, is_completed: true } : prev));
+          // Refresh courses list to sync with server
+          loadMyCourses();
+        } else {
+          addToast('error', 'تعذر تحديد القسم كمكتمل');
+        }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('API Error:', errorData);
+        addToast('error', errorData.message || 'تعذر تحديد القسم كمكتمل');
+      }
+    } catch (e) {
+      console.error('Error marking section as completed:', e);
+      addToast('error', 'حدث خطأ أثناء تحديد القسم كمكتمل');
+    }
   };
 
-  const getCourseProgressPercentage = (course: Course) => {
-    const progress = getLocalProgress(course.id);
-    const totalSections = course.sections?.length || 0;
-    if (totalSections === 0) return 0;
-    return Math.round((progress.completedSections.length / totalSections) * 100);
-  };
-
-  const getCompletedSectionsCount = (course: Course) => {
-    const progress = getLocalProgress(course.id);
-    return progress.completedSections.length;
-  };
 
   // Toast functions
   const addToast = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
@@ -248,6 +352,7 @@ const StudentMyCoursesPage: React.FC = () => {
   const loadMyCourses = async () => {
     try {
       setLoading(true);
+      setLoadingCourseAnalytics(true);
       setError('');
       
       const res = await authFetch('/student/my-courses/');
@@ -259,17 +364,27 @@ const StudentMyCoursesPage: React.FC = () => {
       }
       
       const data = await res.json();
-      const coursesData = data.results || data || [];
+      const coursesData: Course[] = data.results || data || [];
       
-      const coursesWithProgress = coursesData.map((course: Course) => ({
-        ...course,
-        progress: getCourseProgressPercentage(course),
-        completed_sections: getCompletedSectionsCount(course)
-      }));
+      // Load analytics for each course
+      const coursesWithAnalytics = await Promise.all(
+        coursesData.map(async (course) => {
+          try {
+            const analyticsRes = await authFetch(`/teacher/analytics/courses/${course.id}/`);
+            if (analyticsRes && analyticsRes.ok) {
+              const analyticsData = await analyticsRes.json();
+              return { ...course, analytics: analyticsData };
+            }
+          } catch (e) {
+            console.warn(`Failed to load analytics for course ${course.id}:`, e);
+          }
+          return course;
+        })
+      );
       
-      setCourses(coursesWithProgress);
-      if (coursesWithProgress.length > 0) {
-        addToast('success', `تم تحميل ${coursesWithProgress.length} كورس بنجاح`);
+      setCourses(coursesWithAnalytics);
+      if (coursesWithAnalytics.length > 0) {
+        addToast('success', `تم تحميل ${coursesWithAnalytics.length} كورس بنجاح`);
       }
     } catch (e) {
       console.error('Error loading my courses:', e);
@@ -277,6 +392,7 @@ const StudentMyCoursesPage: React.FC = () => {
       addToast('error', 'حدث خطأ أثناء تحميل الكورسات');
     } finally {
       setLoading(false);
+      setLoadingCourseAnalytics(false);
     }
   };
 
@@ -459,7 +575,12 @@ const StudentMyCoursesPage: React.FC = () => {
               <GraduationCap className="w-6 h-6 text-blue-600" />
             </div>
           </div>
-          <p className="text-blue-800 font-medium">جار تحميل الكورسات المسجلة...</p>
+          <p className="text-blue-800 font-medium">
+            {loadingCourseAnalytics ? 'جار تحميل بيانات التقدم...' : 'جار تحميل الكورسات المسجلة...'}
+          </p>
+          {loadingCourseAnalytics && (
+            <p className="text-blue-600 text-sm mt-2">يرجى الانتظار...</p>
+          )}
         </div>
       </div>
     );
@@ -519,15 +640,27 @@ const StudentMyCoursesPage: React.FC = () => {
             <div className="hidden sm:flex items-center gap-3">
               <div className="text-right hidden md:block">
                 <div className="text-blue-200 text-xs sm:text-sm">التقدم</div>
-                <div className="text-white font-bold text-sm">{selectedCourse.progress || 0}%</div>
+                <div className="text-white font-bold text-sm">{getServerOrDerivedProgress(selectedCourse)}%</div>
               </div>
               <div className="w-20 sm:w-32 bg-blue-700/50 rounded-full h-2 sm:h-3">
                 <div 
                   className="h-2 sm:h-3 rounded-full bg-gradient-to-r from-white to-blue-200 transition-all duration-500"
-                  style={{ width: `${selectedCourse.progress || 0}%` }}
+                  style={{ width: `${getServerOrDerivedProgress(selectedCourse)}%` }}
                 ></div>
               </div>
             </div>
+            <button 
+              onClick={() => loadCourseAnalytics(selectedCourse.id)}
+              disabled={loadingAnalytics}
+              className="p-2 sm:p-3 rounded-xl bg-blue-700/50 hover:bg-blue-600/50 transition-all duration-300 disabled:opacity-50"
+              title="تحديث بيانات التقدم"
+            >
+              {loadingAnalytics ? (
+                <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-2 border-white border-t-transparent"></div>
+              ) : (
+                <Trophy className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
+            </button>
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 sm:p-3 rounded-xl bg-blue-700/50 hover:bg-blue-600/50 transition-all duration-300 lg:hidden"
@@ -566,14 +699,19 @@ const StudentMyCoursesPage: React.FC = () => {
       </div>
       <div className={`flex items-center gap-2 text-sm text-blue-600 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
         <Trophy className="w-4 h-4" />
-        <span>{selectedCourse.completed_sections || 0} من {selectedCourse.total_sections} مكتمل</span>
+        <span>
+          {selectedCourse.analytics?.progress_overview?.sections_completed || selectedCourse.completed_sections || 0} 
+          من {selectedCourse.analytics?.progress_overview?.total_sections || selectedCourse.total_sections}
+        </span>
       </div>
     </div>
 
     {/* Sections List */}
     <div className="flex-1 overflow-y-auto">
                 {selectedCourse.sections?.map((section, index) => {
-                  const isCompleted = isSectionCompleted(selectedCourse.id, section.id);
+                  // Use analytics data if available, otherwise fall back to section data
+                  const sectionProgress = selectedCourse.analytics?.section_progress?.find(sp => sp.section_id === section.id);
+                  const isCompleted = sectionProgress ? sectionProgress.is_completed : Boolean(section.is_completed);
                   return (
         <div key={section.id} className="border-b border-blue-100/50 last:border-b-0">
           <button
@@ -617,7 +755,6 @@ const StudentMyCoursesPage: React.FC = () => {
                     {isCompleted && (
                       <div className="flex items-center gap-1 text-green-700">
                         <CheckCircle className="w-3 h-3" />
-                        <span>مكتمل</span>
                       </div>
                     )}
                   </div>
@@ -639,22 +776,26 @@ const StudentMyCoursesPage: React.FC = () => {
         <div className="mb-4">
           <div className="flex justify-between text-sm text-blue-700 mb-2">
             <span className="font-medium">التقدم الإجمالي</span>
-            <span className="font-bold">{selectedCourse.progress || 0}%</span>
+            <span className="font-bold">{getServerOrDerivedProgress(selectedCourse)}%</span>
           </div>
           <div className="w-full bg-blue-200/50 rounded-full h-3">
             <div 
-              className={`h-3 rounded-full bg-gradient-to-r ${getProgressColor(selectedCourse.progress || 0)} transition-all duration-500`}
-              style={{ width: `${selectedCourse.progress || 0}%` }}
+              className={`h-3 rounded-full bg-gradient-to-r ${getProgressColor(getServerOrDerivedProgress(selectedCourse))} transition-all duration-500`}
+              style={{ width: `${getServerOrDerivedProgress(selectedCourse)}%` }}
             ></div>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4 text-center">
           <div className="bg-white/70 rounded-xl p-3">
-            <div className="text-lg font-bold text-blue-800">{selectedCourse.completed_sections || 0}</div>
-            <div className="text-xs text-blue-600">أقسام مكتملة</div>
+            <div className="text-lg font-bold text-blue-800">
+              {selectedCourse.analytics?.progress_overview?.sections_completed || selectedCourse.completed_sections || 0}
+            </div>
+            <div className="text-xs text-blue-600">أقسام</div>
           </div>
           <div className="bg-white/70 rounded-xl p-3">
-            <div className="text-lg font-bold text-blue-800">{selectedCourse.total_sections}</div>
+            <div className="text-lg font-bold text-blue-800">
+              {selectedCourse.analytics?.progress_overview?.total_sections || selectedCourse.total_sections}
+            </div>
             <div className="text-xs text-blue-600">إجمالي الأقسام</div>
           </div>
         </div>
@@ -688,10 +829,9 @@ const StudentMyCoursesPage: React.FC = () => {
                          selectedSection.content_type === 'pdf' ? 'ملف PDF' : 'محتوى نصي'}
                       </span>
                     </div>
-                    {isSectionCompleted(selectedCourse.id, selectedSection.id) && (
+                    {Boolean(selectedSection.is_completed) && (
                       <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg">
                         <CheckCircle className="w-4 h-4" />
-                        <span>مكتمل</span>
                       </div>
                     )}
                   </div>
@@ -699,18 +839,19 @@ const StudentMyCoursesPage: React.FC = () => {
                 
 
                 {/* Main Content */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-blue-200/50 overflow-hidden mb-8">
-                  {selectedSection.content_type === 'video' && selectedSection.video_file && (
-                    <div className="aspect-video bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <PlayCircle className="w-10 h-10" />
-                        </div>
-                        <p className="text-lg font-medium mb-2">مشغل الفيديو</p>
-                        <p className="text-sm text-blue-200">{selectedSection.video_file}</p>
-                      </div>
-                    </div>
-                  )}
+             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-blue-200/50 overflow-hidden mb-8">
+  {selectedSection.content_type === 'video' && selectedSection.video_file && (
+    <div className="aspect-video bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
+      <div className="text-center text-white w-full h-full">
+        <video
+          src={`https://res.cloudinary.com/dtoy7z1ou/${selectedSection.video_file}`}
+          controls
+          className="w-full h-full object-cover"
+        />
+        <p className="text-lg font-medium mt-2">مشغل الفيديو</p>
+      </div>
+    </div>
+  )}
 
                   {selectedSection.content_type === 'text' && (
                     <div className="p-8">
@@ -724,27 +865,36 @@ const StudentMyCoursesPage: React.FC = () => {
                     </div>
                   )}
 
-                  {selectedSection.content_type === 'pdf' && selectedSection.pdf_file && (
-                    <div className="p-8 text-center">
-                      <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <FileText className="w-10 h-10 text-blue-500" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-blue-900 mb-3">ملف PDF</h3>
-                      <p className="text-blue-600 mb-6">انقر للتحميل أو المشاهدة</p>
-                      <button className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
-                        <div className="flex items-center gap-2">
-                          <FileDown className="w-5 h-5" />
-                          <span>تحميل PDF</span>
-                        </div>
-                      </button>
-                    </div>
-                  )}
+                {selectedSection.content_type === 'pdf' && selectedSection.pdf_file && (
+  <div className="p-8 text-center">
+    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+      <FileText className="w-10 h-10 text-blue-500" />
+    </div>
+    <h3 className="text-xl font-semibold text-blue-900 mb-3">ملف PDF</h3>
+    <p className="text-blue-600 mb-6">انقر للتحميل أو المشاهدة</p>
+
+    <a
+      href={selectedSection.pdf_file.startsWith('http') 
+        ? selectedSection.pdf_file 
+        : `https://res.cloudinary.com/dtoy7z1ou/${selectedSection.pdf_file}`
+      }
+      download
+      target="_blank"
+      rel="noopener noreferrer"
+      className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2 justify-center"
+    >
+      <FileDown className="w-5 h-5" />
+      <span>تحميل PDF</span>
+    </a>
+  </div>
+)}
+
                 </div>
 
                 {/* Section Actions */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                   {/* Mark as Completed Button */}
-                  {!isSectionCompleted(selectedCourse.id, selectedSection.id) && (
+                  {!Boolean(selectedSection.is_completed) && (
                     <button 
                       onClick={() => markSectionAsCompleted(selectedCourse.id, selectedSection.id)}
                       className="group p-6 bg-white/80 backdrop-blur-sm border border-green-200/50 rounded-2xl hover:bg-green-50/50 transition-all duration-300 transform hover:scale-105 shadow-lg"
@@ -1044,7 +1194,10 @@ const StudentMyCoursesPage: React.FC = () => {
                 key={course.id}
                 className="group bg-white/90 backdrop-blur-sm border border-blue-200/50 rounded-3xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 cursor-pointer transform hover:scale-105 animate-fade-in"
                 style={{ animationDelay: `${index * 100}ms` }}
-                onClick={() => setSelectedCourse(course)}
+                onClick={() => {
+                  setSelectedCourse(course);
+                  loadCourseAnalytics(course.id);
+                }}
               >
                 <div className="relative h-56 bg-gradient-to-br from-blue-100 to-blue-200 overflow-hidden">
                   {course.thumbnail ? (
@@ -1061,10 +1214,10 @@ const StudentMyCoursesPage: React.FC = () => {
                     </div>
                   )}
                   <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1 text-sm font-bold text-blue-800 shadow-lg">
-                    {course.progress || 0}% مكتمل
+                    {getServerOrDerivedProgress(course)}%
                   </div>
                   {/* Completion Status Badge */}
-                  {(course.progress || 0) === 100 && (
+                  {getServerOrDerivedProgress(course) === 100 && (
                     <div className="absolute top-4 left-4 bg-green-500 text-white rounded-full p-2 shadow-lg animate-pulse">
                       <CheckCircle className="w-5 h-5" />
                     </div>
@@ -1073,7 +1226,7 @@ const StudentMyCoursesPage: React.FC = () => {
                     <div className="bg-white/20 rounded-full h-2">
                       <div 
                         className="h-2 rounded-full bg-white transition-all duration-500"
-                        style={{ width: `${course.progress || 0}%` }}
+                        style={{ width: `${getServerOrDerivedProgress(course)}%` }}
                       ></div>
                     </div>
                   </div>
@@ -1084,10 +1237,9 @@ const StudentMyCoursesPage: React.FC = () => {
                     <h3 className="text-xl font-bold text-blue-900 line-clamp-2 group-hover:text-blue-700 transition-colors duration-300 flex-1">
                       {course.title}
                     </h3>
-                    {(course.progress || 0) === 100 && (
+                    {getServerOrDerivedProgress(course) === 100 && (
                       <div className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
                         <CheckCircle className="w-4 h-4" />
-                        <span>مكتمل</span>
                       </div>
                     )}
                   </div>
@@ -1098,12 +1250,12 @@ const StudentMyCoursesPage: React.FC = () => {
                   <div className="mb-6">
                     <div className="flex justify-between text-sm text-blue-700 mb-2 font-medium">
                       <span>التقدم</span>
-                      <span>{course.progress || 0}%</span>
+                      <span>{getServerOrDerivedProgress(course)}%</span>
                     </div>
                     <div className="w-full bg-blue-100 rounded-full h-3">
                       <div 
-                        className={`h-3 rounded-full bg-gradient-to-r ${getProgressColor(course.progress || 0)} transition-all duration-500`}
-                        style={{ width: `${course.progress || 0}%` }}
+                        className={`h-3 rounded-full bg-gradient-to-r ${getProgressColor(getServerOrDerivedProgress(course))} transition-all duration-500`}
+                        style={{ width: `${getServerOrDerivedProgress(course)}%` }}
                       ></div>
                     </div>
                   </div>
@@ -1111,7 +1263,10 @@ const StudentMyCoursesPage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="flex items-center gap-2 text-sm text-blue-600">
                       <BookOpen className="w-4 h-4" />
-                      <span>{course.completed_sections || 0}/{course.total_sections}</span>
+                      <span>
+                        {course.analytics?.progress_overview?.sections_completed || course.completed_sections || 0}/
+                        {course.analytics?.progress_overview?.total_sections || course.total_sections}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-blue-600">
                       <Clock className="w-4 h-4" />
@@ -1124,12 +1279,12 @@ const StudentMyCoursesPage: React.FC = () => {
                       <span className="font-medium">المعلم:</span> {course.teacher_name}
                     </div>
                     <button className={`px-6 py-3 rounded-xl transition-all duration-300 text-sm font-bold transform hover:scale-105 shadow-lg ${
-                      (course.progress || 0) === 100 
+                      getServerOrDerivedProgress(course) === 100 
                         ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
                         : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700'
                     }`}>
                       <div className="flex items-center gap-2">
-                        {(course.progress || 0) === 100 ? (
+                        {getServerOrDerivedProgress(course) === 100 ? (
                           <>
                             <CheckCircle className="w-4 h-4" />
                             <span>مراجعة الكورس</span>
@@ -1164,7 +1319,7 @@ const StudentMyCoursesPage: React.FC = () => {
                 <Trophy className="w-8 h-8 text-white" />
               </div>
               <div className="text-4xl font-bold text-blue-900 mb-2">
-                {courses.filter(c => (c.progress || 0) === 100).length}
+                {courses.filter(c => getServerOrDerivedProgress(c) === 100).length}
               </div>
               <div className="text-blue-600 font-medium">الكورسات المكتملة</div>
             </div>
@@ -1173,7 +1328,7 @@ const StudentMyCoursesPage: React.FC = () => {
                 <Target className="w-8 h-8 text-white" />
               </div>
               <div className="text-4xl font-bold text-blue-900 mb-2">
-                {Math.round(courses.reduce((sum, course) => sum + (course.progress || 0), 0) / courses.length) || 0}%
+                {Math.round(courses.reduce((sum, course) => sum + getServerOrDerivedProgress(course), 0) / courses.length) || 0}%
               </div>
               <div className="text-blue-600 font-medium">متوسط التقدم</div>
             </div>
