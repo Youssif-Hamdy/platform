@@ -20,6 +20,7 @@ import ParentChildMonitoring from '../ParentPages/ParentChildMonitoring';
 import ParentLessonsCompleted from '../ParentPages/ParentLessonsCompleted';
 import ParentQuizGrades from '../ParentPages/ParentQuizGrades';
 import ParentAttendanceReports from '../ParentPages/ParentAttendanceReports';
+import NotificationsPage from './NotificationsPage';
 
 interface Profile {
   id?: number;
@@ -39,6 +40,17 @@ interface Profile {
   skills?: string[];
 }
 
+interface Notification {
+  id: number;
+  sender_name: string;
+  course_title: string;
+  title: string;
+  message: string;
+  notification_type: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -46,6 +58,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [isDesktop, setIsDesktop] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const [currentPage, setCurrentPage] = useState<
     | 'dashboard'
@@ -70,6 +83,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     | 'parentLessonsCompleted'
     | 'parentQuizGrades'
     | 'parentAttendanceReports'
+    | 'notifications'
   >('dashboard');
   const [selectedCourse, setSelectedCourse] = useState<{ id: string | number; title?: string } | null>(null);
   const [selectedSectionTitle, setSelectedSectionTitle] = useState<string | null>(null);
@@ -180,6 +194,27 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     setTimeout(() => setToast(null), 4000);
   };
 
+  const fetchNotifications = async () => {
+    if (!isStudentUser) return;
+    
+    try {
+      const res = await authFetch('/student/get/notifications/');
+      
+      if (res && res.ok) {
+        const data = await res.json();
+        // API returns { notifications: [], unread_count: 3, total_count: 3 }
+        setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+      } else {
+        setNotifications([]);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      setNotifications([]);
+    }
+  };
+
+  const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.is_read).length : 0;
+
 
 
   useEffect(() => {
@@ -248,6 +283,14 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     };
     loadProfile();
   }, []);
+
+  // Fetch notifications for students
+  useEffect(() => {
+    if (isStudentUser) {
+      fetchNotifications();
+    }
+  }, [isStudentUser]);
+
 
   // Track viewport to apply desktop-only margins for content/header
   useEffect(() => {
@@ -335,10 +378,27 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
         return <ParentQuizGrades />;
       case 'parentAttendanceReports':
         return <ParentAttendanceReports />;
+      case 'notifications':
+        return <NotificationsPage onBack={() => setCurrentPage('dashboard')} />;
       default:
         return <DashboardHomePage />;
     }
   };
+
+  const NotificationsButton = () => (
+    <button
+      onClick={() => setCurrentPage('notifications')}
+      className="relative p-2 mr-2 rounded-lg bg-white border border-gray-200 hover:bg-blue-50 text-gray-700 shadow"
+      aria-label="Notifications"
+    >
+      <Bell className="w-4 h-4" />
+      {unreadCount > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+          {unreadCount}
+        </span>
+      )}
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50">
@@ -373,6 +433,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
           <Menu className="w-5 h-5 text-blue-700" />
         </button>
         <div className="flex items-center gap-2">
+          {isStudentUser && <NotificationsButton />}
           <button className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-blue-50 text-gray-700 shadow" aria-label="Settings">
             <Settings className="w-4 h-4" />
           </button>
@@ -386,6 +447,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       <div className={`hidden md:block ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses')
  ? '!hidden' : ''}`} style={{ marginLeft: isDesktop ? (sidebarCollapsed ? 80 : 256) : 0, transition: 'margin-left 300ms ease-in-out' }}>
         <div className="h-14 flex items-center justify-end px-4 border-b border-gray-100 bg-white/70 backdrop-blur-md">
+          {isStudentUser && <NotificationsButton />}
           <button className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-blue-50 text-gray-700 shadow" aria-label="Settings">
             <Settings className="w-4 h-4" />
           </button>

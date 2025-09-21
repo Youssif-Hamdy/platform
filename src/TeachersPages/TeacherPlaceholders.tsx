@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Users, AlertCircle, RefreshCw, Search, GraduationCap, CalendarDays } from 'lucide-react';
+import { Users, AlertCircle, RefreshCw, Search, GraduationCap, CalendarDays, Send, BookOpen, Check, CheckCircle2, Bell } from 'lucide-react';
 
 export const UploadContentPage: React.FC = () => (
   <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm">
@@ -696,9 +696,494 @@ export const EngagementReportsPage: React.FC = () => {
   );
 };
 
-export const SendNotificationsPage: React.FC = () => (
-  <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm">
-    <h2 className="text-lg font-bold text-gray-900 mb-2">إرسال إشعارات للطلاب</h2>
-    <p className="text-gray-600 text-sm">سيتم التنفيذ لاحقًا.</p>
+interface Student {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  course_title?: string;
+  progress_percentage?: number;
+  enrollment_date?: string;
+  sections_completed?: number;
+  total_sections?: number;
+  quizzes_passed?: number;
+  total_quizzes?: number;
+  total_time_spent_minutes?: number;
+  last_activity?: string | null;
+}
+
+interface Course {
+  id: number;
+  title: string;
+  description?: string;
+}
+
+export const SendNotificationsPage: React.FC = () => {
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
+  const [notificationType, setNotificationType] = useState<'teacher_students' | 'teacher_course'>('teacher_students');
+  const [students, setStudents] = useState<Student[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const authFetch = async (url: string, init?: RequestInit) => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      window.location.href = '/signin';
+      return new Response(null, { status: 401 });
+    }
+    let res = await fetch(url, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...(init && init.headers ? init.headers : {}),
+      }
+    });
+    if (res.status === 401) {
+      const refresh = localStorage.getItem('refreshToken');
+      if (refresh) {
+        const refreshRes = await fetch('/user/token/refresh/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh })
+        });
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          if (data.access) localStorage.setItem('accessToken', data.access);
+          res = await fetch(url, {
+            ...init,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${data.access}`,
+              ...(init && init.headers ? init.headers : {}),
+            }
+          });
+        } else {
+          localStorage.clear();
+          window.location.href = '/signin';
+          return new Response(null, { status: 401 });
+        }
+      } else {
+        localStorage.clear();
+        window.location.href = '/signin';
+        return new Response(null, { status: 401 });
+      }
+    }
+    return res;
+  };
+
+  const loadData = async () => {
+    try {
+      setError('');
+      setLoading(true);
+      
+      // Fetch students
+      const studentsRes = await authFetch('/teacher/analytics/students/');
+      if (studentsRes && studentsRes.ok) {
+        const studentsData = await studentsRes.json();
+        const studentsList = Array.isArray(studentsData) ? studentsData : studentsData?.results || [];
+        console.log('Raw students data:', studentsList);
+        
+        // Filter out students with null IDs and ensure ID is a number
+        const validStudents = studentsList
+          .filter((student: any) => 
+            student && 
+            student.student_id !== null && 
+            student.student_id !== undefined && 
+            !isNaN(Number(student.student_id))
+          )
+          .map((student: any) => ({
+            id: Number(student.student_id),
+            first_name: student.student_name?.split(' ')[0] || '',
+            last_name: student.student_name?.split(' ').slice(1).join(' ') || '',
+            email: student.student_email || '',
+            course_title: student.course_title || '',
+            progress_percentage: student.progress_percentage || 0,
+            enrollment_date: student.enrollment_date || '',
+            sections_completed: student.sections_completed || 0,
+            total_sections: student.total_sections || 0,
+            quizzes_passed: student.quizzes_passed || 0,
+            total_quizzes: student.total_quizzes || 0,
+            total_time_spent_minutes: student.total_time_spent_minutes || 0,
+            last_activity: student.last_activity
+          }));
+        
+        console.log('Valid students:', validStudents);
+        setStudents(validStudents);
+      }
+
+      // Fetch courses
+      const coursesRes = await authFetch('/teacher/courses/');
+      if (coursesRes && coursesRes.ok) {
+        const coursesData = await coursesRes.json();
+        const coursesList = Array.isArray(coursesData) ? coursesData : coursesData?.results || [];
+        setCourses(coursesList);
+      }
+    } catch (e) {
+      setError('حدث خطأ أثناء تحميل البيانات');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleStudentToggle = (studentId: number) => {
+    setSelectedStudents(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleSelectAllStudents = () => {
+    if (selectedStudents.length === students.length) {
+      setSelectedStudents([]);
+    } else {
+      setSelectedStudents(students.map(student => student.id));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!title.trim() || !message.trim()) {
+      setError('العنوان والرسالة مطلوبان');
+      return;
+    }
+
+    if (notificationType === 'teacher_students' && selectedStudents.length === 0) {
+      setError('يرجى اختيار طالب واحد على الأقل');
+      return;
+    }
+
+    if (notificationType === 'teacher_course' && (!selectedCourse || selectedCourse === 0)) {
+      setError('يرجى اختيار دورة واحدة على الأقل');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+
+      const payload: any = {
+        title: title.trim(),
+        message: message.trim(),
+        notification_type: notificationType
+      };
+
+      if (notificationType === 'teacher_students') {
+        // Ensure all selected students have valid IDs
+        const validStudentIds = selectedStudents.filter(id => 
+          id !== null && 
+          id !== undefined && 
+          !isNaN(Number(id))
+        ).map(id => Number(id));
+        
+        console.log('Selected students:', selectedStudents);
+        console.log('Valid student IDs:', validStudentIds);
+        
+        payload.student_ids = validStudentIds;
+      } else if (notificationType === 'teacher_course') {
+        payload.course = selectedCourse;
+      }
+
+      console.log('Sending notification payload:', payload);
+      
+      const response = await authFetch('/teacher/notifications/send/', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      console.log('Response status:', response?.status);
+      console.log('Response headers:', response?.headers);
+
+      if (response && response.ok) {
+        setSuccess('تم إرسال الإشعار بنجاح');
+        setTitle('');
+        setMessage('');
+        setSelectedStudents([]);
+        setSelectedCourse(null);
+      } else {
+        const errorText = await response?.text();
+        console.log('Error response:', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          setError(errorData?.message || errorData?.detail || 'حدث خطأ في إرسال الإشعار');
+        } catch {
+          setError(errorText || 'حدث خطأ في إرسال الإشعار');
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message || 'حدث خطأ في إرسال الإشعار');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto bg-white/80 backdrop-blur rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">جاري تحميل البيانات...</p>
+          </div>
+        </div>
   </div>
 );
+  }
+ return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 p-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white/90 backdrop-blur-lg rounded-2xl border border-blue-100 shadow-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl">
+          
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white relative overflow-hidden">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="relative z-10 flex items-center space-x-4 rtl:space-x-reverse">
+              <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm">
+                <Bell className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">إرسال إشعارات للطلاب</h2>
+                <p className="text-blue-100 text-sm mt-1">قم بإرسال إشعارات مخصصة للطلاب أو الدورات</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-8">
+            {/* Alert Messages */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-lg transform transition-all duration-300 animate-pulse">
+                <div className="flex items-center">
+                  <AlertCircle className="w-5 h-5 text-red-400 mr-3" />
+                  <p className="text-red-700">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-400 rounded-lg transform transition-all duration-300 animate-bounce">
+                <div className="flex items-center">
+                  <CheckCircle2 className="w-5 h-5 text-green-400 mr-3" />
+                  <p className="text-green-700">{success}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-8">
+              
+              {/* Notification Type */}
+              <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100">
+                <label className="block text-lg font-semibold text-blue-900 mb-4">
+                  نوع الإشعار
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="relative group cursor-pointer">
+                    <input
+                      type="radio"
+                      value="teacher_students"
+                      checked={notificationType === 'teacher_students'}
+                      onChange={(e) => setNotificationType(e.target.value as 'teacher_students')}
+                      className="sr-only"
+                    />
+                    <div className={`p-4 rounded-lg border-2 transition-all duration-300 transform group-hover:scale-105 ${
+                      notificationType === 'teacher_students' 
+                        ? 'border-blue-500 bg-blue-100 shadow-md' 
+                        : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+                    }`}>
+                      <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                        <Users className={`w-5 h-5 ${notificationType === 'teacher_students' ? 'text-blue-600' : 'text-gray-400'}`} />
+                        <span className={`font-medium ${notificationType === 'teacher_students' ? 'text-blue-900' : 'text-gray-700'}`}>
+                          إشعار للطلاب
+                        </span>
+                        {notificationType === 'teacher_students' && (
+                          <Check className="w-4 h-4 text-blue-600 mr-auto" />
+                        )}
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="relative group cursor-pointer">
+                    <input
+                      type="radio"
+                      value="teacher_course"
+                      checked={notificationType === 'teacher_course'}
+                      onChange={(e) => setNotificationType(e.target.value as 'teacher_course')}
+                      className="sr-only"
+                    />
+                    <div className={`p-4 rounded-lg border-2 transition-all duration-300 transform group-hover:scale-105 ${
+                      notificationType === 'teacher_course' 
+                        ? 'border-blue-500 bg-blue-100 shadow-md' 
+                        : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+                    }`}>
+                      <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                        <BookOpen className={`w-5 h-5 ${notificationType === 'teacher_course' ? 'text-blue-600' : 'text-gray-400'}`} />
+                        <span className={`font-medium ${notificationType === 'teacher_course' ? 'text-blue-900' : 'text-gray-700'}`}>
+                          إشعار للدورات
+                        </span>
+                        {notificationType === 'teacher_course' && (
+                          <Check className="w-4 h-4 text-blue-600 mr-auto" />
+                        )}
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Title */}
+              <div className="group">
+                <label className="block text-lg font-semibold text-gray-800 mb-3">
+                  عنوان الإشعار *
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 group-hover:border-blue-300"
+                  placeholder="أدخل عنوان الإشعار"
+                  required
+                />
+              </div>
+
+              {/* Message */}
+              <div className="group">
+                <label className="block text-lg font-semibold text-gray-800 mb-3">
+                  نص الرسالة *
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 resize-none group-hover:border-blue-300"
+                  placeholder="أدخل نص الرسالة"
+                  required
+                />
+              </div>
+
+              {/* Students Selection */}
+              {notificationType === 'teacher_students' && (
+                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-lg font-semibold text-gray-800">
+                      اختيار الطلاب *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleSelectAllStudents}
+                      className="px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-all duration-300 font-medium"
+                    >
+                      {selectedStudents.length === students.length ? 'إلغاء الكل' : 'اختيار الكل'}
+                    </button>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto border-2 border-gray-200 rounded-xl p-4 bg-white">
+                    {students.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-500">لا يوجد طلاب متاحون</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {students.map((student) => (
+                          <label key={student.id} className="flex items-center p-3 rounded-lg hover:bg-blue-50 transition-all duration-200 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={selectedStudents.includes(student.id)}
+                              onChange={() => handleStudentToggle(student.id)}
+                              className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                                <span className="font-medium text-gray-800 group-hover:text-blue-800 transition-colors">
+                                  {student.first_name} {student.last_name}
+                                </span>
+                                <span className="text-sm text-gray-500">({student.email})</span>
+                              </div>
+                              {student.course_title && (
+                                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full mt-1 inline-block">
+                                  دورة: {student.course_title}
+                                </span>
+                              )}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {selectedStudents.length > 0 && (
+                    <div className="mt-3 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
+                      تم اختيار {selectedStudents.length} من {students.length} طالب
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Course Selection */}
+              {notificationType === 'teacher_course' && (
+                <div className="group">
+                  <label className="block text-lg font-semibold text-gray-800 mb-3">
+                    اختيار الدورة *
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedCourse || ''}
+                      onChange={(e) => setSelectedCourse(Number(e.target.value))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 appearance-none bg-white group-hover:border-blue-300"
+                      required
+                    >
+                      <option value="">اختر دورة</option>
+                      {courses.map((course) => (
+                        <option key={course.id} value={course.id}>
+                          {course.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <div className="flex justify-end pt-4">
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className={`group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold text-lg shadow-lg transform transition-all duration-300 ${
+                    loading 
+                      ? 'opacity-75 cursor-not-allowed' 
+                      : 'hover:from-blue-700 hover:to-blue-800 hover:scale-105 hover:shadow-xl active:scale-95'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                    {loading ? (
+                      <>
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                        <span>جاري الإرسال...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                        <span>إرسال الإشعار</span>
+                      </>
+                    )}
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
