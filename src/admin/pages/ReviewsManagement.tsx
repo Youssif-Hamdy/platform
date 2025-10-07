@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Search, 
@@ -14,9 +14,37 @@ import {
   Calendar,
   MessageSquare,
   Award,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+
+interface Course {
+  id: number;
+  title: string;
+  description: string;
+  teacher_name: string;
+  thumbnail: string;
+  status: string;
+  difficulty: string;
+  price: string;
+  duration_hours: number;
+  total_sections: number;
+  total_quizzes: number;
+  total_enrollments: number;
+  average_rating: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CourseReview {
+  id: number;
+  user: number;
+  user_name: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+}
 
 interface Review {
   id: number;
@@ -51,116 +79,119 @@ const ReviewsManagement: React.FC = () => {
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - in real app, this would come from API
-  const reviews: Review[] = [
-    {
-      id: 1,
-      user: {
-        id: 1,
-        name: 'أحمد محمد',
-        avatar: 'AM',
-        type: 'student'
-      },
-      course: {
-        id: 1,
-        title: 'تعلم البرمجة من الصفر',
-        instructor: 'د. سارة أحمد'
-      },
-      rating: 5,
-      comment: 'كورس ممتاز جداً، الشرح واضح والمحتوى مفيد جداً. أنصح به بشدة!',
-      date: '2024-01-15',
-      status: 'approved',
-      helpful: 12,
-      reported: false,
-      response: {
-        text: 'شكراً لك على التقييم الإيجابي!',
-        date: '2024-01-16',
-        author: 'د. سارة أحمد'
+  // Fetch all courses
+  const fetchCourses = async () => {
+    try {
+      const response = await fetch('/student/get-all-courses/', {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('فشل في جلب الكورسات');
       }
-    },
-    {
-      id: 2,
-      user: {
-        id: 2,
-        name: 'فاطمة علي',
-        avatar: 'FA',
-        type: 'student'
-      },
-      course: {
-        id: 2,
-        title: 'أساسيات التصميم الجرافيكي',
-        instructor: 'م. خالد محمود'
-      },
-      rating: 4,
-      comment: 'كورس جيد جداً، لكن أتمنى لو كان هناك المزيد من التطبيقات العملية.',
-      date: '2024-01-14',
-      status: 'approved',
-      helpful: 8,
-      reported: false
-    },
-    {
-      id: 3,
-      user: {
-        id: 3,
-        name: 'محمد حسن',
-        avatar: 'MH',
-        type: 'student'
-      },
-      course: {
-        id: 1,
-        title: 'تعلم البرمجة من الصفر',
-        instructor: 'د. سارة أحمد'
-      },
-      rating: 2,
-      comment: 'المحتوى صعب جداً ولا يوجد شرح كافي للمبتدئين.',
-      date: '2024-01-13',
-      status: 'pending',
-      helpful: 2,
-      reported: true
-    },
-    {
-      id: 4,
-      user: {
-        id: 4,
-        name: 'نور الدين',
-        avatar: 'ND',
-        type: 'parent'
-      },
-      course: {
-        id: 3,
-        title: 'الرياضيات للصف الثالث الثانوي',
-        instructor: 'أ. أحمد فؤاد'
-      },
-      rating: 5,
-      comment: 'ابني استفاد كثيراً من هذا الكورس، الدرجات تحسنت بشكل ملحوظ.',
-      date: '2024-01-12',
-      status: 'approved',
-      helpful: 15,
-      reported: false
-    },
-    {
-      id: 5,
-      user: {
-        id: 5,
-        name: 'سارة محمود',
-        avatar: 'SM',
-        type: 'student'
-      },
-      course: {
-        id: 4,
-        title: 'تعلم اللغة الإنجليزية',
-        instructor: 'د. مريم عبدالله'
-      },
-      rating: 1,
-      comment: 'كورس سيء جداً، المحتوى قديم ولا يوجد تفاعل مع الطلاب.',
-      date: '2024-01-11',
-      status: 'rejected',
-      helpful: 0,
-      reported: true
-    }
-  ];
 
+      const coursesData = await response.json();
+      return coursesData;
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      toast.error('فشل في جلب الكورسات');
+      return [];
+    }
+  };
+
+  // Fetch reviews for a specific course
+  const fetchCourseReviews = async (courseId: number): Promise<CourseReview[]> => {
+    try {
+      const response = await fetch(`/teacher/courses/${courseId}/reviews/`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return []; // No reviews for this course
+        }
+        throw new Error('فشل في جلب التقييمات');
+      }
+
+      const reviewsData = await response.json();
+      return reviewsData;
+    } catch (error) {
+      console.error(`Error fetching reviews for course ${courseId}:`, error);
+      return [];
+    }
+  };
+
+  // Convert API data to internal Review format
+  const convertToReviewFormat = (courseReview: CourseReview, course: Course): Review => {
+    // Generate avatar from user name
+    const generateAvatar = (name: string) => {
+      const words = name.split(' ');
+      if (words.length >= 2) {
+        return words[0].charAt(0) + words[1].charAt(0);
+      }
+      return name.substring(0, 2);
+    };
+
+    return {
+      id: courseReview.id,
+      user: {
+        id: courseReview.user,
+        name: courseReview.user_name,
+        avatar: generateAvatar(courseReview.user_name),
+        type: 'student' // Default to student, could be enhanced with user type API
+      },
+      course: {
+        id: course.id,
+        title: course.title,
+        instructor: course.teacher_name
+      },
+      rating: courseReview.rating,
+      comment: courseReview.comment || 'لا يوجد تعليق',
+      date: courseReview.created_at,
+      status: 'approved', // Default status, could be enhanced with review status API
+      helpful: Math.floor(Math.random() * 20), // Mock helpful count
+      reported: false // Mock reported status
+    };
+  };
+
+  // Fetch all reviews from all courses
+  const fetchAllReviews = async () => {
+    setLoading(true);
+    try {
+      const coursesData = await fetchCourses();
+      const allReviews: Review[] = [];
+
+      // Fetch reviews for each course
+      for (const course of coursesData) {
+        const courseReviews = await fetchCourseReviews(course.id);
+        const convertedReviews = courseReviews.map(review => 
+          convertToReviewFormat(review, course)
+        );
+        allReviews.push(...convertedReviews);
+      }
+
+      setReviews(allReviews);
+    } catch (error) {
+      console.error('Error fetching all reviews:', error);
+      toast.error('فشل في جلب التقييمات');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllReviews();
+  }, []);
+
+  // Mock data for fallback - keeping some for demo purposes
+ 
   // Filter reviews based on search, status, and rating
   const filteredReviews = reviews.filter(review => {
     const matchesSearch = 
@@ -292,16 +323,43 @@ const ReviewsManagement: React.FC = () => {
     approved: reviews.filter(r => r.status === 'approved').length,
     pending: reviews.filter(r => r.status === 'pending').length,
     rejected: reviews.filter(r => r.status === 'rejected').length,
-    averageRating: reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length,
+    averageRating: reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0,
     reported: reviews.filter(r => r.reported).length
   };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">إدارة التقييمات</h1>
+          <p className="text-gray-600">مراجعة وإدارة تقييمات الكورسات</p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto mb-4" />
+            <p className="text-gray-600">جارِ تحميل التقييمات...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">إدارة التقييمات</h1>
-        <p className="text-gray-600">مراجعة وإدارة تقييمات الكورسات</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">إدارة التقييمات</h1>
+          <p className="text-gray-600">مراجعة وإدارة تقييمات الكورسات</p>
+        </div>
+        <button
+          onClick={fetchAllReviews}
+          disabled={loading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : 'hidden'}`} />
+          تحديث
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -456,7 +514,19 @@ const ReviewsManagement: React.FC = () => {
 
       {/* Reviews List */}
       <div className="space-y-4">
-        {filteredReviews.map((review, index) => (
+        {filteredReviews.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+            <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-600 mb-2">لا توجد تقييمات</h3>
+            <p className="text-gray-500">
+              {reviews.length === 0 
+                ? 'لم يتم العثور على أي تقييمات في النظام'
+                : 'لا توجد تقييمات تطابق معايير البحث المحددة'
+              }
+            </p>
+          </div>
+        ) : (
+          filteredReviews.map((review, index) => (
           <motion.div
             key={review.id}
             initial={{ opacity: 0, y: 20 }}
@@ -566,7 +636,8 @@ const ReviewsManagement: React.FC = () => {
               </div>
             </div>
           </motion.div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Review Details Modal */}

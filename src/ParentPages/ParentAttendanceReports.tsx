@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, TrendingUp, BarChart3, CheckCircle, AlertTriangle, Target, BookOpen, Users, Activity } from 'lucide-react';
+import {  TrendingUp, BarChart3, CheckCircle, AlertTriangle, Target, BookOpen, Users, Activity, ChevronDown } from 'lucide-react';
 
 interface Child {
   id: number;
@@ -45,6 +45,8 @@ const ParentAttendanceReports: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [childId, setChildId] = useState<number | null>(null);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
 
   const authFetch = async (url: string, init?: RequestInit) => {
     const token = localStorage.getItem('accessToken');
@@ -115,6 +117,7 @@ const ParentAttendanceReports: React.FC = () => {
         const profileData = await res.json();
 
         if (profileData.children && profileData.children.length > 0) {
+          setChildren(profileData.children);
           const firstChildId = profileData.children[0].id;
           setChildId(firstChildId);
           loadAttendanceData(firstChildId);
@@ -131,6 +134,12 @@ const ParentAttendanceReports: React.FC = () => {
 
     fetchProfile();
   }, []);
+
+  const handleChildChange = (childId: number) => {
+    setChildId(childId);
+    setShowDropdown(false);
+    loadAttendanceData(childId);
+  };
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -170,7 +179,11 @@ const ParentAttendanceReports: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-6">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-6"
+      onClick={() => setShowDropdown(false)}
+      dir="rtl"
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -178,13 +191,55 @@ const ParentAttendanceReports: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <BarChart3 className="w-6 h-6 text-indigo-600" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 rounded-lg">
+                <BarChart3 className="w-6 h-6 text-indigo-600" />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900">تقارير الحضور والتقدم</h1>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">تقارير الحضور والتقدم</h1>
+            
+            {/* Child Selection Dropdown */}
+            {children.length > 1 && (
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDropdown(!showDropdown);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+                >
+                  <span className="text-gray-700">
+                    {children.find(child => child.id === childId)?.name || 'اختر الابن/الابنة'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                </button>
+                
+                {showDropdown && (
+                  <div 
+                    className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="py-2">
+                      {children.map((child) => (
+                        <button
+                          key={child.id}
+                          onClick={() => handleChildChange(child.id)}
+                          className={`w-full text-right px-4 py-2 hover:bg-gray-50 transition-colors ${
+                            childId === child.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'
+                          }`}
+                        >
+                          <div className="font-medium">{child.name}</div>
+                          <div className="text-sm text-gray-500">{child.username}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <p className="text-gray-600">تقرير شامل عن أداء {attendanceData.child.name} في التعلم</p>
+          <p className="text-gray-600">تقرير شامل عن أداء {children.find(child => child.id === childId)?.name || 'الابن/الابنة'} في التعلم</p>
         </motion.div>
 
         {/* Child Info Card */}

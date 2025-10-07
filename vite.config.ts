@@ -11,6 +11,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true, // يسمح بالوصول من أي IP
+    cors: true, // يسمح بكل الـ Origins أثناء التطوير
     proxy: {
        '/admin-panel': {
         target: 'https://educational-platform-git-main-youssefs-projects-e2c35ebf.vercel.app',

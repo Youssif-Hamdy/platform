@@ -24,6 +24,18 @@
   background: #2563eb;
 }
 
+/* صفحة الكورسات: إجبار سكرول أسود عند تفعيل كلاس على الـ body */
+body.student-scroll-dark-page {
+  scrollbar-width: thin;
+  scrollbar-color: #000000 #f1f5f9 !important;
+}
+body.student-scroll-dark-page ::-webkit-scrollbar-thumb {
+  background: #000000 !important;
+}
+body.student-scroll-dark-page ::-webkit-scrollbar-thumb:hover {
+  background: #111111 !important;
+}
+
 /* تنسيقات خاصة بمحتوى النموذج */
 .form-scroll-container {
   scrollbar-width: thin;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Clock, Award, RotateCcw, CheckCircle, AlertCircle, BookOpen, FileText, ChevronDown, ChevronUp, Trash2, Edit3, Maximize, Minimize } from 'lucide-react';
+import { Plus, X, Clock, Award, RotateCcw, CheckCircle, AlertCircle, BookOpen, FileText, ChevronDown, ChevronUp, Trash2} from 'lucide-react';
 
 const API_BASE = ''; // تأكد من تعديل هذا حسب حاجتك
 
@@ -611,7 +611,9 @@ const TeacherAddQuiz: React.FC<Props> = ({ courseTitle, sectionTitle }) => {
                     onChange={(e) => setCorrectChoice(Number(e.target.value))} 
                     className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 transition-all duration-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 hover:border-blue-300"
                   >
-                    {currentChoices.map((choice, index) => (
+                    {currentChoices.map((// @ts-ignore
+
+                      choice, index) => (
                       <option key={index} value={index}>الخيار {index + 1}</option>
                     ))}
                   </select>

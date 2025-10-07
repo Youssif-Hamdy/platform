@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileText, Video, File, Check, AlertCircle, BookOpen, Clock, Eye, CheckCircle2, Plus, X } from 'lucide-react';
+import { Upload, FileText, Video, File, Check, AlertCircle, BookOpen, Clock, Eye, CheckCircle2 } from 'lucide-react';
 
 type ContentType = 'text' | 'video' | 'pdf';
 
@@ -116,16 +116,6 @@ const TeacherUploadContent: React.FC = () => {
     }
   };
 
-  const getContentTypeIcon = (type: ContentType) => {
-    switch (type) {
-      case 'video':
-        return <Video className="w-5 h-5" />;
-      case 'pdf':
-        return <File className="w-5 h-5" />;
-      default:
-        return <FileText className="w-5 h-5" />;
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 p-4">

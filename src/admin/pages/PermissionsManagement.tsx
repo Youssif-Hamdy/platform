@@ -1,20 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Shield, 
-  Users, 
-  BookOpen, 
-  BarChart3, 
-  Settings, 
-  Eye, 
+ 
   Edit, 
   Save, 
   X,
   CheckCircle,
   XCircle,
-  AlertTriangle,
-  Lock,
-  Unlock,
+
   UserCheck,
   GraduationCap,
   User,

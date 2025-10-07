@@ -36,6 +36,7 @@ const SupportCenter: React.FC = () => {
 
   const [messagesStats, setMessagesStats] = useState<any | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
+  // @ts-ignore
   const [ticketMessages, setTicketMessages] = useState<any[]>([]);
 
   const getToken = () => localStorage.getItem('accessToken') || localStorage.getItem('token');

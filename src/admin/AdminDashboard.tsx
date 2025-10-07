@@ -9,7 +9,6 @@ import {
   Star, 
   Shield, 
   Bell,
-  Search,
   LogOut,
   ChevronRight,
   Home,
@@ -51,6 +50,7 @@ const AdminDashboard: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activePage, setActivePage] = useState('dashboard');
   const [users, setUsers] = useState<User[]>([]);
+  // @ts-ignore
   const [searchTerm, setSearchTerm] = useState('');
 
   // Support panel state
@@ -305,29 +305,29 @@ const AdminDashboard: React.FC = () => {
       />
 
       {/* Sidebar - Always visible on desktop, hidden on mobile */}
-      <div className={`fixed inset-y-0 left-0 z-50 bg-white shadow-xl transform transition-all duration-300 ease-in-out ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 ${sidebarCollapsed ? 'w-20' : 'w-80'}`}>
-        <div className="flex flex-col h-full" dir="rtl">
+      <div className={`fixed inset-y-0 right-0 z-50 bg-white shadow-xl transform transition-all duration-300 ease-in-out ${
+        sidebarOpen ? 'translate-x-0' : 'translate-x-full'
+      } lg:translate-x-0 ${sidebarCollapsed ? 'w-24' : 'w-80'}`}>
+        <div className="flex flex-col h-full">
           {/* Sidebar Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200" dir="rtl">
             {!sidebarCollapsed && (
              <div className="flex items-center gap-3">
   <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
     <GraduationCap className="w-5 h-5 text-white" />
   </div>
   <div className="flex flex-col">
-    <h2 className="text-xl font-bold text-gray-800 leading-tight">لوحة التحكم</h2>
-    <p className="text-sm text-gray-600 mt-0.5">الإدارة العامة</p>
+    <h2 className="text-xl font-bold text-gray-800 leading-tight text-right">لوحة التحكم</h2>
+    <p className="text-sm text-gray-600 mt-0.5 text-right">الإدارة العامة</p>
   </div>
 </div>
             )}
             {sidebarCollapsed && (
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mx-auto">
-                <GraduationCap className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mx-auto">
+                <GraduationCap className="w-7 h-7 text-white" />
               </div>
             )}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               {/* Collapse button - only visible on desktop */}
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -346,10 +346,8 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
 
-         
-
           {/* Menu Items */}
-          <nav className="flex-1 px-6 py-4 space-y-2" dir="rtl">
+          <nav className="flex-1 px-6 py-4 space-y-2">
             {menuItems.map((item, index) => (
               <motion.button
                 key={item.id}
@@ -360,17 +358,22 @@ const AdminDashboard: React.FC = () => {
                   setActivePage(item.id);
                   setSidebarOpen(false); // Close sidebar on mobile after selection
                 }}
-                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} p-3 rounded-lg transition-all duration-200 ${
+                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-4' : 'p-3'} rounded-lg transition-all duration-200 ${
                   activePage === item.id
-                    ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-500'
+                    ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
                 title={sidebarCollapsed ? item.label : ''}
+                dir="rtl"
               >
-                <div className="flex items-center space-x-3 space-x-reverse">
-                  <item.icon className={`w-5 h-5 m-1 ${activePage === item.id ? 'text-blue-500' : item.color}`} />
-                  {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
-                </div>
+                {sidebarCollapsed ? (
+                  <item.icon className="w-6 h-6" />
+                ) : (
+                  <div className="flex items-center gap-3 w-full">
+                    <item.icon className={`w-5 h-5 ${activePage === item.id ? 'text-blue-500' : item.color}`} />
+                    <span className="font-medium text-right flex-1">{item.label}</span>
+                  </div>
+                )}
               </motion.button>
             ))}
           </nav>
@@ -378,20 +381,27 @@ const AdminDashboard: React.FC = () => {
           {/* Sidebar Footer */}
           <div className="p-6 border-t border-gray-200">
             <button 
-              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3 space-x-reverse'} p-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors`}
+              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center p-4' : 'p-3'} rounded-lg text-red-600 hover:bg-red-50 transition-colors`}
               title={sidebarCollapsed ? 'تسجيل الخروج' : ''}
+              dir="rtl"
             >
-              <LogOut className="w-5 h-5" />
-              {!sidebarCollapsed && <span className="font-medium">تسجيل الخروج</span>}
+              {sidebarCollapsed ? (
+                <LogOut className="w-6 h-6" />
+              ) : (
+                <div className="flex items-center gap-3 w-full">
+                  <LogOut className="w-5 h-5" />
+                  <span className="font-medium text-right flex-1">تسجيل الخروج</span>
+                </div>
+              )}
             </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ml-0 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-80'}`}>
+      <div className={`flex-1 transition-all duration-300 mr-0 ${sidebarCollapsed ? 'lg:mr-24' : 'lg:mr-80'}`}>
         {/* Top Bar */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
+        <header className="bg-white shadow-sm border-b border-gray-200" dir="rtl">
         <div className="flex items-center justify-between px-6 py-4">
   <div className="flex items-center gap-4">
     {/* Mobile Menu Button */}
@@ -402,12 +412,12 @@ const AdminDashboard: React.FC = () => {
       <Menu className="w-6 h-6 text-blue-600" />
     </button>
     
-    <h1 className="text-2xl font-bold text-gray-800">
+    <h1 className="text-2xl font-bold text-gray-800 text-right">
       {menuItems.find(item => item.id === activePage)?.label || 'لوحة التحكم'}
     </h1>
   </div>
 
-            <div className="flex items-center space-x-4 space-x-reverse">
+            <div className="flex items-center gap-4">
               <button onClick={() => setActivePage('support')} className="p-2 rounded-lg hover:bg-gray-100 transition-colors relative">
                 <Bell className="w-6 h-6 text-gray-600" />
                 {unreadTicketCount > 0 && (

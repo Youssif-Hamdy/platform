@@ -1,19 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import StarRating from '../component/StarRating';
 import { motion } from 'framer-motion';
 import { 
-  GraduationCap, 
-  Clock, 
-  Users, 
-  Star, 
-  Play, 
+ 
   Download, 
   FileText, 
-  HelpCircle, 
   CheckCircle, 
   AlertCircle,
   BookOpen,
   Video,
-  FileDown,
   Award,
   MessageCircle,
   ArrowLeft
@@ -55,12 +50,12 @@ interface StudentCourseDetailsPageProps {
 
 const StudentCourseDetailsPage: React.FC<StudentCourseDetailsPageProps> = ({ 
   courseId, 
-  courseTitle 
 }) => {
   const [course, setCourse] = useState<CourseDetails | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [rating, setRating] = useState<number>(0);
 
   const authFetch = async (url: string, init?: RequestInit) => {
     const token = localStorage.getItem('accessToken');
@@ -245,6 +240,13 @@ const StudentCourseDetailsPage: React.FC<StudentCourseDetailsPageProps> = ({
         </button>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{course.title}</h1>
         <p className="text-gray-600">{course.description}</p>
+        <div className="mt-4 flex items-center gap-3">
+          <span className="text-sm text-gray-700">قيّم هذا الكورس:</span>
+          <StarRating value={rating} onChange={setRating} maxStars={5} />
+          {rating > 0 && (
+            <span className="text-sm text-gray-600">{rating} / 5</span>
+          )}
+        </div>
       </div>
 
       {/* معلومات الكورس */}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import {
   FaGraduationCap,
   FaChalkboardTeacher,
@@ -34,6 +34,7 @@ import {
 } from 'react-icons/fa';
 import Navbar from '../component/Navbar';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 // Images array for slider
 const sliderImages = [
@@ -116,6 +117,164 @@ interface FooterColumn {
   links: LinkItem[];
 }
 
+// Lightweight visibility-based lazy wrapper to defer rendering offscreen sections
+const LazySection: React.FC<{ children: React.ReactNode }> = memo(({ children }) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!ref.current || visible) return;
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (entry.isIntersecting) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  return <div ref={ref}>{visible ? children : null}</div>;
+});
+
+// Memoized small components
+const Stars: React.FC<{ avg: number }> = memo(({ avg }) => {
+  const fullStars = Math.floor(avg);
+  const hasHalf = avg - fullStars >= 0.5;
+  return (
+    <div className="flex items-center">
+      {Array.from({ length: 5 }, (_, i) => {
+        const filled = i < fullStars || (i === fullStars && hasHalf);
+        return (
+          <FaStar
+            key={i}
+            className={`${filled ? 'text-amber-400' : 'text-gray-300'} w-4 h-4 ml-0.5`}
+          />
+        );
+      })}
+    </div>
+  );
+});
+
+interface CourseCardProps {
+  course: CourseItem;
+  index: number;
+  onOpen: (c: CourseItem) => void;
+  renderIcon: (title: string) => React.ReactNode;
+}
+
+const CourseCard: React.FC<CourseCardProps> = memo(({ course, index, onOpen, renderIcon }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  return (
+  <motion.div
+    className="group bg-white rounded-xl overflow-hidden shadow-md border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300 relative cursor-pointer"
+    initial={{ opacity: 0, y: 30 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, ease: 'easeOut', delay: index * 0.1 }}
+    whileHover={{ y: -5 }}
+    onClick={() => onOpen(course)}
+  >
+    <div className="relative h-48 bg-gradient-to-br from-blue-500 to-blue-600 overflow-hidden">
+      {/* Loading placeholder */}
+      {course.thumbnail && !imageLoaded && !imageError && (
+        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+          <div className="animate-pulse flex items-center justify-center">
+            <div className="w-8 h-8 bg-gray-300 rounded-full animate-bounce"></div>
+          </div>
+        </div>
+      )}
+      
+      {course.thumbnail && !imageError ? (
+        <img 
+          src={`https://res.cloudinary.com/dtoy7z1ou/${course.thumbnail}`}
+          alt={course.title}
+          className={`w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-300 bg-gray-200 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          loading="lazy"
+          onLoad={() => setImageLoaded(true)}
+          onError={() => {
+            setImageError(true);
+            setImageLoaded(false);
+          }}
+        />
+      ) : null}
+      
+      {/* Fallback div for when image fails to load or doesn't exist */}
+      <div className={`w-full h-full flex items-center justify-center text-white ${
+        (!course.thumbnail || imageError) ? '' : 'hidden'
+      }`}>
+        <div className="bg-white/20 p-6 rounded-full group-hover:scale-110 transition-all duration-300">
+          {renderIcon(course.title)}
+        </div>
+      </div>
+      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+        <button className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-blue-600 hover:bg-white transition-all duration-300">
+          <FaPlay className="text-sm ml-0.5" />
+        </button>
+      </div>
+      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-bold text-gray-800 shadow">
+        ⭐ {course.average_rating ? course.average_rating.toFixed(1) : 'جديد'}
+      </div>
+    </div>
+    <div className="p-4">
+      <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-300 line-clamp-2">
+        {course.title}
+      </h3>
+      <div className="flex items-center mb-2 text-sm text-gray-600">
+        <FaUser className="text-blue-500 ml-1" />
+        <span>{course.teacher_name}</span>
+      </div>
+      <div className="flex items-center mb-3">
+        <span className="text-amber-500 font-semibold text-sm ml-2">
+          {course.average_rating ? course.average_rating.toFixed(1) : 'جديد'}
+        </span>
+        <Stars avg={course.average_rating || 0} />
+        <span className="text-xs text-gray-500 mr-2">({course.review_count ?? 0})</span>
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="text-xl font-bold text-blue-600">
+          {course.price === undefined ? '' : (isNaN(parseFloat(course.price)) ? course.price : `${parseFloat(course.price) === 0 ? 'مجاني' : `${parseFloat(course.price)} ج.م`}`)}
+        </div>
+        <button 
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center space-x-1 space-x-reverse"
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <FaShoppingCart className="text-xs" />
+          <span>اشترك الآن</span>
+        </button>
+      </div>
+    </div>
+  </motion.div>
+  );
+});
+
+const TeacherCard: React.FC<{ t: TeacherItem }> = memo(({ t }) => (
+  <div
+    className="bg-white border border-blue-200 rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer flex flex-col items-center text-center"
+  >
+    <div className="w-24 h-24 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center text-blue-400 mb-5">
+      {t.pic ? (
+        <img
+          src={t.pic}
+          alt={t.full_name}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <FaChalkboardTeacher className="w-12 h-12" />
+      )}
+    </div>
+    <h3 className="text-xl font-semibold text-blue-900 mb-2">{t.full_name}</h3>
+    <p className="text-sm text-blue-600 mb-3">انضم: {new Date(t.date_joined).toLocaleDateString('ar-EG')}</p>
+  </div>
+));
+
 const LearningPlatform: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
@@ -129,21 +288,33 @@ const LearningPlatform: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const coursesPerPage = 4;
-  // Atropos will handle 3D interactions; no manual tilt state needed
+    const navigate = useNavigate();
+      const handleClick = () => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      navigate("/dashboard");
+    } else {
+      navigate("/signin"); // أو أي صفحة تسجيل دخول
+    }
+  };
+
 
   // Teachers
   const [teachers, setTeachers] = useState<TeacherItem[]>([]);
   const [teachersLoading, setTeachersLoading] = useState(false);
   const [teachersError, setTeachersError] = useState<string | null>(null);
 
-  // Check if mobile
+  // Check if mobile with debounced resize
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    let timeoutId: number | undefined;
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    const onResize = () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(checkMobile, 150);
     };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   // Fetch teachers from API
@@ -244,44 +415,51 @@ const LearningPlatform: React.FC = () => {
     fetchCourses();
   }, []);
 
+  // Pause autoplay when tab hidden
+  useEffect(() => {
+    const handleVisibility = () => {
+      setIsAutoPlaying(!document.hidden);
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
   // Auto-play slider
   useEffect(() => {
     if (!isAutoPlaying) return;
-
     const interval = setInterval(() => {
       nextSlide();
     }, 5000);
-
     return () => clearInterval(interval);
-  }, [currentSlide, isAutoPlaying]);
+  }, [currentSlide, isAutoPlaying, /* eslint-disable-line react-hooks/exhaustive-deps */]);
 
-  const nextSlide = () => {
+  const nextSlide = useCallback(() => {
     if (isAnimating) return;
     setIsAnimating(true);
     setSlideDirection('next');
     setCurrentSlide((prev) => (prev + 1) % sliderImages.length);
     setTimeout(() => setIsAnimating(false), 800);
-  };
+  }, [isAnimating]);
 
-  const prevSlide = () => {
+  const prevSlide = useCallback(() => {
     if (isAnimating) return;
     setIsAnimating(true);
     setSlideDirection('prev');
     setCurrentSlide((prev) => (prev - 1 + sliderImages.length) % sliderImages.length);
     setTimeout(() => setIsAnimating(false), 800);
-  };
+  }, [isAnimating]);
 
-  const goToSlide = (index: number) => {
+  const goToSlide = useCallback((index: number) => {
     if (isAnimating || index === currentSlide) return;
     setIsAnimating(true);
     setSlideDirection(index > currentSlide ? 'next' : 'prev');
     setCurrentSlide(index);
     setTimeout(() => setIsAnimating(false), 800);
-  };
+  }, [isAnimating, currentSlide]);
 
   // Removed manual tilt handlers; Atropos manages mouse/parallax
 
-  const features: FeatureItem[] = [
+  const features: FeatureItem[] = useMemo(() => [
     {
       icon: <FaChalkboardTeacher className="text-2xl lg:text-3xl" />,
       title: "خبراء متخصصون",
@@ -302,14 +480,14 @@ const LearningPlatform: React.FC = () => {
       title: "دعم فني دائم",
       description: "فريق دعم فني متاح على مدار الساعة لمساعدتك"
     }
-  ];
+  ], []);
 
-  const stats: StatItem[] = [
+  const stats: StatItem[] = useMemo(() => [
     { number: "50,000+", label: "طالب مسجل" },
     { number: "5,000+", label: "كورس متاح" },
     { number: "500+", label: "خبير ومدرس" },
     { number: "98%", label: "رضى العملاء" }
-  ];
+  ], []);
 
   // Helper function to get category icon based on title
   const getCategoryIcon = (title: string) => {
@@ -357,48 +535,32 @@ const LearningPlatform: React.FC = () => {
   };
 
   // عرض نجوم التقييم (5 نجوم بأسلوب يودِمي)
-  const renderStars = (avg: number) => {
-    const fullStars = Math.floor(avg);
-    const hasHalf = avg - fullStars >= 0.5;
-    return (
-      <div className="flex items-center">
-        {Array.from({ length: 5 }, (_, i) => {
-          const filled = i < fullStars || (i === fullStars && hasHalf);
-          return (
-            <FaStar
-              key={i}
-              className={`${filled ? 'text-amber-400' : 'text-gray-300'} w-4 h-4 ml-0.5`}
-            />
-          );
-        })}
-      </div>
-    );
-  };
+  // replaced by Stars memo component
 
   // Navigation functions
-  const nextPage = () => {
+  const nextPage = useCallback(() => {
     const maxPage = Math.ceil(courses.length / coursesPerPage) - 1;
     setCurrentPage(prev => prev < maxPage ? prev + 1 : 0);
-  };
+  }, [courses.length]);
 
-  const prevPage = () => {
+  const prevPage = useCallback(() => {
     const maxPage = Math.ceil(courses.length / coursesPerPage) - 1;
     setCurrentPage(prev => prev > 0 ? prev - 1 : maxPage);
-  };
+  }, [courses.length]);
 
   // Modal functions
-  const openModal = (course: CourseItem) => {
+  const openModal = useCallback((course: CourseItem) => {
     setSelectedCourse(course);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedCourse(null);
-  };
+  }, []);
 
 
-  const footerColumns: FooterColumn[] = [
+  const footerColumns: FooterColumn[] = useMemo(() => [
     {
       title: "الكورسات",
       links: [
@@ -429,7 +591,7 @@ const LearningPlatform: React.FC = () => {
         { icon: <FaUsers className="ml-2 text-sm" />, text: "المجتمع" }
       ]
     }
-  ];
+  ], []);
 
   const { scrollYProgress } = useScroll();
   const heroRotateX = useTransform(scrollYProgress, [0, 0.2], [0, -8]);
@@ -503,8 +665,8 @@ const LearningPlatform: React.FC = () => {
             <div
               key={index}
               className={`absolute inset-0 transition-all duration-1000 ease-in-out ${index === currentSlide
-                  ? 'opacity-100 scale-100'
-                  : 'opacity-0 scale-110'
+                  ? 'opacity-100 scale-100 pointer-events-auto'
+                  : 'opacity-0 scale-110 pointer-events-none'
                 }`}
             >
               {/* Background Image */}
@@ -565,11 +727,15 @@ const LearningPlatform: React.FC = () => {
                           : '-translate-y-10 opacity-0'
                       }`}>
                       <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 px-4">
-                        <button data-atropos-offset="12" className="group px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl sm:rounded-2xl hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-blue-500/30 font-medium text-base sm:text-lg flex items-center justify-center space-x-3 space-x-reverse backdrop-blur-sm">
+                        <button
+                          onClick={handleClick}
+                          data-atropos-offset="12"
+                          className="group px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl sm:rounded-2xl hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-blue-500/30 font-medium text-base sm:text-lg flex items-center justify-center space-x-3 space-x-reverse backdrop-blur-sm"
+                        >
                           <FaPlay className="text-sm group-hover:scale-110 transition-transform duration-300" />
                           <span>ابدأ التعلم الآن</span>
                         </button>
-                        <button data-atropos-offset="10" className="group px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 bg-white/10 text-white border border-white/30 rounded-xl sm:rounded-2xl hover:bg-white/20 backdrop-blur-md transform hover:scale-105 transition-all duration-300 font-medium text-base sm:text-lg flex items-center justify-center space-x-3 space-x-reverse shadow-lg hover:shadow-2xl">
+                        <button onClick={scrollToCourses} data-atropos-offset="10" className="group px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 bg-white/10 text-white border border-white/30 rounded-xl sm:rounded-2xl hover:bg-white/20 backdrop-blur-md transform hover:scale-105 transition-all duration-300 font-medium text-base sm:text-lg flex items-center justify-center space-x-3 space-x-reverse shadow-lg hover:shadow-2xl">
                           <FaSearch className="text-sm group-hover:scale-110 transition-transform duration-300" />
                           <span>تصفح الكورسات</span>
                         </button>
@@ -708,7 +874,7 @@ const LearningPlatform: React.FC = () => {
       </motion.section>
 
       {/* قسم المدرسين - بسيط يعرض نبذة */}
-   <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-b from-blue-50 to-white">
+   <LazySection><section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-b from-blue-50 to-white">
   <div className="container mx-auto px-4 sm:px-6 lg:px-8">
     <div className="text-center mb-14">
       <h2 className="text-4xl font-extrabold text-blue-900">مدرسونا</h2>
@@ -726,30 +892,12 @@ const LearningPlatform: React.FC = () => {
     ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
         {teachers.slice(0, 10).map((t) => (
-          <div
-            key={t.id}
-            className="bg-white border border-blue-200 rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer flex flex-col items-center text-center"
-          >
-            <div className="w-24 h-24 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center text-blue-400 mb-5">
-              {t.pic ? (
-                <img
-                  src={t.pic}
-                  alt={t.full_name}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <FaChalkboardTeacher className="w-12 h-12" />
-              )}
-            </div>
-            <h3 className="text-xl font-semibold text-blue-900 mb-2">{t.full_name}</h3>
-            <p className="text-sm text-blue-600 mb-3">انضم: {new Date(t.date_joined).toLocaleDateString('ar-EG')}</p>
-          </div>
+          <TeacherCard key={t.id} t={t} />
         ))}
       </div>
     )}
   </div>
-</section>
+</section></LazySection>
 
 
       {/* قسم الإحصاءات - Responsive */}
@@ -789,7 +937,7 @@ const LearningPlatform: React.FC = () => {
       </section>
 
       {/* قسم الخدمات - بطاقة 3D واحدة */}
-      <motion.section
+      <LazySection><motion.section
         id="services"
         className="py-16 sm:py-20 lg:py-24 bg-white relative overflow-hidden"
         initial="hidden"
@@ -891,7 +1039,7 @@ const LearningPlatform: React.FC = () => {
             </motion.div>
           </div>
         </div>
-      </motion.section>
+      </motion.section></LazySection>
 
       {/* قسم الكورسات - سكشن منفصل مع تصميم محسن */}
       <motion.section id="courses" className="py-16 sm:py-20 lg:py-24 bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
@@ -952,82 +1100,7 @@ const LearningPlatform: React.FC = () => {
               {/* Courses Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
                 {courses.slice(currentPage * coursesPerPage, (currentPage + 1) * coursesPerPage).map((course, index) => (
-                  <motion.div
-                    key={course.id}
-                    className="group bg-white rounded-xl overflow-hidden shadow-md border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all duration-300 relative cursor-pointer"
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, ease: 'easeOut', delay: index * 0.1 }}
-                    whileHover={{ y: -5 }}
-                    onClick={() => openModal(course)}
-                  >
-                    {/* Course Thumbnail */}
-                    <div className="relative h-40 bg-gradient-to-br from-blue-500 to-blue-600 overflow-hidden">
-                      {course.thumbnail ? (
-                        <img 
-                          src={course.thumbnail} 
-                          alt={course.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white">
-                          <div className="bg-white/20 p-6 rounded-full group-hover:scale-110 transition-all duration-300">
-                            {getCategoryIcon(course.title)}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Play Button Overlay */}
-                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                        <button className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-blue-600 hover:bg-white transition-all duration-300">
-                          <FaPlay className="text-sm ml-0.5" />
-                        </button>
-                      </div>
-                      {/* Badge: Average Rating */}
-                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-bold text-gray-800 shadow">
-                        ⭐ {course.average_rating ? course.average_rating.toFixed(1) : 'جديد'}
-                      </div>
-                    </div>
-
-                    <div className="p-4">
-                      {/* Course Title */}
-                      <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-300 line-clamp-2">
-                        {course.title}
-                      </h3>
-                      
-                      {/* Instructor */}
-                      <div className="flex items-center mb-2 text-sm text-gray-600">
-                        <FaUser className="text-blue-500 ml-1" />
-                        <span>{course.teacher_name}</span>
-                      </div>
-
-                      {/* Rating Stars + count */}
-                      <div className="flex items-center mb-3">
-                        <span className="text-amber-500 font-semibold text-sm ml-2">
-                          {course.average_rating ? course.average_rating.toFixed(1) : 'جديد'}
-                        </span>
-                        {renderStars(course.average_rating || 0)}
-                        <span className="text-xs text-gray-500 mr-2">({course.review_count ?? 0})</span>
-                      </div>
-
-                      {/* Price and Action */}
-                      <div className="flex items-center justify-between">
-                        <div className="text-xl font-bold text-blue-600">
-                          {formatPrice(course.price)}
-                        </div>
-                        <button 
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center space-x-1 space-x-reverse"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Enroll logic here
-                          }}
-                        >
-                          <FaShoppingCart className="text-xs" />
-                          <span>اشترك الآن</span>
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
+                  <CourseCard key={course.id} course={course} index={index} onOpen={openModal} renderIcon={getCategoryIcon} />
                 ))}
               </div>
 
@@ -1228,7 +1301,7 @@ const LearningPlatform: React.FC = () => {
 </section>
 
       {/* تذييل الصفحة - Responsive */}
-      <footer className="bg-gray-900 text-white pt-12 sm:pt-16 lg:pt-20 pb-6 sm:pb-8 lg:pb-10 relative overflow-hidden">
+      <LazySection><footer className="bg-gray-900 text-white pt-12 sm:pt-16 lg:pt-20 pb-6 sm:pb-8 lg:pb-10 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900"></div>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 lg:gap-12">
@@ -1298,7 +1371,7 @@ const LearningPlatform: React.FC = () => {
             </div>
           </div>
         </div>
-      </footer>
+      </footer></LazySection>
 
       {/* Course Details Modal */}
       {isModalOpen && selectedCourse && (
@@ -1312,13 +1385,27 @@ const LearningPlatform: React.FC = () => {
           >
             {/* Modal Header */}
             <div className="relative">
-              <div className="h-64 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 relative overflow-hidden">
+              <div className="h-80 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 relative overflow-hidden">
                 {selectedCourse.thumbnail ? (
-                  <img 
-                    src={selectedCourse.thumbnail} 
-                    alt={selectedCourse.title}
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    <img 
+                      src={`https://res.cloudinary.com/dtoy7z1ou/${selectedCourse.thumbnail}`}
+                      alt={selectedCourse.title}
+                      className="w-full h-full object-cover object-center bg-gray-200"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        target.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                    {/* Fallback for failed image load */}
+                    <div className="hidden w-full h-full flex items-center justify-center text-white absolute inset-0">
+                      <div className="bg-white/20 p-12 rounded-full backdrop-blur-sm shadow-2xl">
+                        {getCategoryIcon(selectedCourse.title)}
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white">
                     <div className="bg-white/20 p-12 rounded-full backdrop-blur-sm shadow-2xl">

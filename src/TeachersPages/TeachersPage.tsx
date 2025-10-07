@@ -1,4 +1,5 @@
 import React from 'react';
+import { useUiLang } from '../utils/i18n';
 import { motion } from 'framer-motion';
 import { Users, Star, BookOpen, MessageCircle } from 'lucide-react';
 
@@ -51,9 +52,10 @@ const TeachersPage: React.FC = () => {
     }
   ];
 
+  const { isRTL } = useUiLang();
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">المعلمون</h1>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} dir={isRTL ? 'rtl' : 'ltr'}>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">{isRTL ? 'المعلمون' : 'Teachers'}</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {teachers.map((teacher) => (

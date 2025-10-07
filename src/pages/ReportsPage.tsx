@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, TrendingUp, TrendingDown, Users, BookOpen, Award, Clock } from 'lucide-react';
+import { FileText, TrendingUp, TrendingDown,  BookOpen, Award, Clock } from 'lucide-react';
 
 const ReportsPage: React.FC = () => {
   // بيانات تجريبية للتقارير
@@ -130,7 +130,10 @@ const ReportsPage: React.FC = () => {
         <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">ساعات الدراسة اليومية</h3>
           <div className="space-y-4">
-            {['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'].map((day, index) => (
+            
+            {['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'].map((day,  // @ts-ignore
+
+            index) => (
               <div key={day} className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">{day}</span>
                 <div className="flex items-center gap-2">

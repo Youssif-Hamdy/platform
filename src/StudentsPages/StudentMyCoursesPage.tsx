@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import StarRating from '../component/StarRating';
 import { useNavigate } from 'react-router-dom';
 import { 
   GraduationCap, 
@@ -148,6 +149,17 @@ interface Toast {
   message: string;
 }
 
+interface CertificatePayload {
+  certificate_url: string;
+  download_url?: string;
+  verification_code: string;
+  issued_date: string;
+  student_name: string;
+  course_title: string;
+  message?: string;
+  id?: number; // some APIs may include numeric id
+}
+
 const StudentMyCoursesPage: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -167,6 +179,8 @@ const StudentMyCoursesPage: React.FC = () => {
   const [submittingReview, setSubmittingReview] = useState<boolean>(false);
   const [loadingAnalytics, setLoadingAnalytics] = useState<boolean>(false);
   const [loadingCourseAnalytics, setLoadingCourseAnalytics] = useState<boolean>(false);
+  const [certificatesByCourseId, setCertificatesByCourseId] = useState<Record<number, CertificatePayload>>({});
+  const [loadingCertificateCourseId, setLoadingCertificateCourseId] = useState<number | null>(null);
 
   const navigate = useNavigate();
 
@@ -396,6 +410,82 @@ const StudentMyCoursesPage: React.FC = () => {
     }
   };
 
+  // Certificates
+  const fetchCertificate = async (courseId: number, action?: 'view' | 'download') => {
+    try {
+      setLoadingCertificateCourseId(courseId);
+      const res = await authFetch(`/student/certificates/${courseId}/`);
+      if (res && res.ok) {
+        const data: CertificatePayload = await res.json();
+        setCertificatesByCourseId(prev => ({ ...prev, [courseId]: data }));
+        addToast('success', 'تم إنشاء/جلب الشهادة بنجاح');
+
+        if (action === 'view') {
+          navigate(`/student/certificate/${courseId}`);
+        }
+        if (action === 'download') {
+          await downloadCertificate(courseId, data);
+        }
+      } else {
+        addToast('error', 'تعذر جلب الشهادة');
+      }
+    } catch (e) {
+      console.error('Error fetching certificate:', e);
+      addToast('error', 'حدث خطأ أثناء جلب الشهادة');
+    } finally {
+      setLoadingCertificateCourseId(null);
+    }
+  };
+
+  const downloadCertificate = async (courseId: number, payload?: CertificatePayload) => {
+    try {
+      const certificate = payload || certificatesByCourseId[courseId];
+      let usedCertificate = certificate;
+      if (!usedCertificate) {
+        // fetch first if not present
+        setLoadingCertificateCourseId(courseId);
+        const res = await authFetch(`/student/certificates/${courseId}/`);
+        if (!res || !res.ok) {
+          addToast('error', 'تعذر جلب الشهادة للتحميل');
+          return;
+        }
+        usedCertificate = await res.json();
+        setCertificatesByCourseId(prev => ({ ...prev, [courseId]: usedCertificate! }));
+      }
+
+      let dlUrl = usedCertificate.download_url
+        ? usedCertificate.download_url
+        : `/student/certificates/download/${usedCertificate.id ?? usedCertificate.verification_code}/`;
+
+      // Normalize '/api' prefix to match vite proxy config
+      if (!/^https?:\/\//.test(dlUrl) && dlUrl.startsWith('/api/')) {
+        dlUrl = dlUrl.replace(/^\/api/, '');
+      }
+
+      // Fetch as blob with auth header to avoid client-side routing issues
+      const resBlob = await authFetch(dlUrl, { method: 'GET' });
+      if (!resBlob || !resBlob.ok) {
+        addToast('error', 'تعذر تحميل ملف الشهادة');
+        return;
+      }
+      const blob = await resBlob.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `certificate_${usedCertificate.verification_code || courseId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+      addToast('success', 'تم تنزيل الشهادة');
+    } catch (e) {
+      console.error('Error downloading certificate:', e);
+      addToast('error', 'حدث خطأ أثناء تنزيل الشهادة');
+    } finally {
+      setLoadingCertificateCourseId(null);
+    }
+  };
+
   const loadQuiz = async (courseId: number, sectionId: number, quizId: number) => {
     try {
       setLoadingQuiz(true);
@@ -540,6 +630,8 @@ const StudentMyCoursesPage: React.FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const isCourseCompleted = (course: Course) => getServerOrDerivedProgress(course) === 100;
+
   // Quiz Timer Effect
   useEffect(() => {
     let interval: number | undefined;
@@ -563,6 +655,14 @@ const StudentMyCoursesPage: React.FC = () => {
 
   useEffect(() => {
     loadMyCourses();
+  }, []);
+
+  // Force black scrollbars globally while this page is mounted
+  useEffect(() => {
+    document.body.classList.add('student-scroll-dark-page');
+    return () => {
+      document.body.classList.remove('student-scroll-dark-page');
+    };
   }, []);
 
   if (loading) {
@@ -610,7 +710,7 @@ const StudentMyCoursesPage: React.FC = () => {
   // Course Player View
   if (selectedCourse) {
     return (
-      <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-white">
+      <div className="student-scroll-dark h-screen flex flex-col overflow-hidden bg-gradient-to-br from-blue-50 to-white" dir="rtl">
         {/* Header */}
     <div className="bg-gradient-to-r from-blue-800 to-blue-900 text-white px-4 py-3 sm:px-6 sm:py-4 shadow-lg">
         <div className="flex items-center justify-between">
@@ -671,10 +771,10 @@ const StudentMyCoursesPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden relative min-h-0">
          {/* Sidebar */}
 {sidebarOpen && (
-  <div className={`bg-white/90 backdrop-blur-xl border-r border-blue-200/50 flex flex-col overflow-hidden absolute lg:relative z-10 h-full lg:h-auto shadow-xl transition-all duration-300 ${
+  <div className={`bg-white/90 backdrop-blur-xl border-l border-blue-200/50 flex flex-col overflow-hidden absolute lg:relative inset-y-0 right-0 z-10 h-full lg:h-full shadow-xl transition-all duration-300 ${
     sidebarCollapsed ? 'lg:w-20' : 'lg:w-80'
   } w-80`}>
     <div className="p-6 border-b border-blue-200/50 bg-gradient-to-r from-blue-50 to-white">
@@ -687,7 +787,7 @@ const StudentMyCoursesPage: React.FC = () => {
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="p-2 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-all duration-300 hidden lg:block"
           >
-            {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+            {sidebarCollapsed ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
           </button>
           <button 
             onClick={() => setSidebarOpen(false)}
@@ -707,7 +807,7 @@ const StudentMyCoursesPage: React.FC = () => {
     </div>
 
     {/* Sections List */}
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto custom-scrollbar">
                 {selectedCourse.sections?.map((section, index) => {
                   // Use analytics data if available, otherwise fall back to section data
                   const sectionProgress = selectedCourse.analytics?.section_progress?.find(sp => sp.section_id === section.id);
@@ -721,7 +821,7 @@ const StudentMyCoursesPage: React.FC = () => {
               if (window.innerWidth < 1024) setSidebarOpen(false);
             }}
             className={`w-full text-right p-4 hover:bg-blue-50/50 transition-all duration-300 group ${
-              selectedSection?.id === section.id ? 'bg-blue-50 border-r-4 border-blue-500' : ''
+              selectedSection?.id === section.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
             }`}
           >
             <div className="flex items-center gap-4">
@@ -761,7 +861,7 @@ const StudentMyCoursesPage: React.FC = () => {
                 </div>
               )}
               {!sidebarCollapsed && (
-                <ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600 transition-all duration-300" />
+                <ChevronLeft className="w-4 h-4 text-blue-400 group-hover:text-blue-600 transition-all duration-300" />
               )}
             </div>
           </button>
@@ -805,13 +905,18 @@ const StudentMyCoursesPage: React.FC = () => {
 )}
 
           {/* Main Content Area */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden custom-scrollbar">
             {selectedSection ? (
-              <div className="flex-1 overflow-y-auto p-8">
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                 {/* Section Header */}
                 <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-blue-200/50">
                   <h1 className="text-3xl font-bold text-blue-900 mb-3">{selectedSection.title}</h1>
-                  <p className="text-blue-600 mb-4 leading-relaxed">{selectedSection.description}</p>
+                    <p
+                      className="text-blue-600 mb-4 leading-relaxed"
+                      dir="auto"
+                    >
+                      {selectedSection.description}
+                    </p>
                   
                   <div className="flex flex-wrap gap-4 text-sm">
                     <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg text-blue-700">
@@ -841,51 +946,77 @@ const StudentMyCoursesPage: React.FC = () => {
                 {/* Main Content */}
              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-blue-200/50 overflow-hidden mb-8">
   {selectedSection.content_type === 'video' && selectedSection.video_file && (
-    <div className="aspect-video bg-gradient-to-br from-blue-900 to-blue-800 flex items-center justify-center">
-      <div className="text-center text-white w-full h-full">
+    <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-2xl overflow-hidden">
+      <div className="aspect-video">
         <video
           src={`https://res.cloudinary.com/dtoy7z1ou/${selectedSection.video_file}`}
           controls
           className="w-full h-full object-cover"
         />
-        <p className="text-lg font-medium mt-2">مشغل الفيديو</p>
       </div>
-    </div>
+      <div className="p-6 bg-white/95 backdrop-blur-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+            <PlayCircle className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-blue-900">مشغل الفيديو</h3>
+        </div>
+       
+        </div>
+      </div>
   )}
 
                   {selectedSection.content_type === 'text' && (
-                    <div className="p-8">
-                      <div className="flex items-center gap-3 mb-6">
-                        <BookOpen className="w-6 h-6 text-blue-500" />
-                        <h3 className="text-xl font-semibold text-blue-900">المحتوى النصي</h3>
+                    <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl overflow-hidden">
+                      <div className="p-6 bg-white/95 backdrop-blur-sm border-b border-blue-200/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                            <BookOpen className="w-6 h-6 text-white" />
+                          </div>
+                          <h3 className="text-xl font-bold text-blue-900">المحتوى النصي</h3>
+                        </div>
                       </div>
-                      <div className="prose max-w-none text-blue-800 whitespace-pre-wrap leading-relaxed bg-blue-50/50 rounded-xl p-6">
-                        {selectedSection.content}
+                      <div className="p-6 max-h-96 overflow-y-auto custom-scrollbar">
+                        <div className="prose max-w-none text-blue-800 whitespace-pre-wrap leading-relaxed">
+                          {selectedSection.content}
+                        </div>
+                        
                       </div>
                     </div>
                   )}
 
                 {selectedSection.content_type === 'pdf' && selectedSection.pdf_file && (
-  <div className="p-8 text-center">
-    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-      <FileText className="w-10 h-10 text-blue-500" />
+  <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl overflow-hidden">
+    <div className="p-6 bg-white/95 backdrop-blur-sm border-b border-blue-200/50">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+          <FileText className="w-6 h-6 text-white" />
+        </div>
+        <h3 className="text-xl font-bold text-blue-900">ملف PDF</h3>
+      </div>
     </div>
-    <h3 className="text-xl font-semibold text-blue-900 mb-3">ملف PDF</h3>
-    <p className="text-blue-600 mb-6">انقر للتحميل أو المشاهدة</p>
-
-    <a
-      href={selectedSection.pdf_file.startsWith('http') 
-        ? selectedSection.pdf_file 
-        : `https://res.cloudinary.com/dtoy7z1ou/${selectedSection.pdf_file}`
-      }
-      download
-      target="_blank"
-      rel="noopener noreferrer"
-      className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2 justify-center"
-    >
-      <FileDown className="w-5 h-5" />
-      <span>تحميل PDF</span>
-    </a>
+    <div className="p-6 max-h-96 overflow-y-auto custom-scrollbar">
+      <div className="text-center mb-6">
+        <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FileText className="w-12 h-12 text-blue-500" />
+        </div>
+        <p className="text-blue-600 text-lg font-medium mb-6">انقر للتحميل أو المشاهدة</p>
+        <a
+          href={selectedSection.pdf_file.startsWith('http') 
+            ? selectedSection.pdf_file 
+            : `https://res.cloudinary.com/dtoy7z1ou/${selectedSection.pdf_file}`
+          }
+          download
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-bold text-lg"
+        >
+          <FileDown className="w-6 h-6" />
+          <span>تحميل PDF</span>
+        </a>
+      </div>
+     
+    </div>
   </div>
 )}
 
@@ -952,18 +1083,16 @@ const StudentMyCoursesPage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                     <div>
                       <label className="block text-sm text-blue-700 mb-2">التقييم</label>
-                      <select
-                        className="w-full border border-blue-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        value={courseRating}
-                        onChange={(e) => setCourseRating(e.target.value ? Number(e.target.value) : '')}
-                      >
-                        <option value="">اختر من 1 إلى 5</option>
-                        <option value={1}>1</option>
-                        <option value={2}>2</option>
-                        <option value={3}>3</option>
-                        <option value={4}>4</option>
-                        <option value={5}>5</option>
-                      </select>
+                      <div className="flex items-center gap-3">
+                        <StarRating
+                          value={typeof courseRating === 'number' ? courseRating : 0}
+                          onChange={(r) => setCourseRating(r as number)}
+                          maxStars={5}
+                        />
+                        {courseRating !== '' && (
+                          <span className="text-sm text-blue-700">{courseRating} / 5</span>
+                        )}
+                      </div>
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-sm text-blue-700 mb-2">تعليق (اختياري)</label>
@@ -976,7 +1105,7 @@ const StudentMyCoursesPage: React.FC = () => {
                       />
                     </div>
                   </div>
-                  <div className="mt-4 text-left">
+                  <div className="mt-4 text-right">
                     <button
                       onClick={submitCourseReview}
                       disabled={submittingReview}
@@ -988,6 +1117,38 @@ const StudentMyCoursesPage: React.FC = () => {
                 </div>
 
              
+
+                {/* Quiz Display */}
+                {/* Certificate Info Panel */}
+                {selectedCourse && isCourseCompleted(selectedCourse) && certificatesByCourseId[selectedCourse.id] && (
+                  <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-green-200/60">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="text-right">
+                        <div className="text-green-900 font-bold mb-1">الشهادة متاحة</div>
+                        <div className="text-green-700 text-sm">
+                          كود التحقق: {certificatesByCourseId[selectedCourse.id].verification_code}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => navigate(`/student/certificate/${selectedCourse.id}`)}
+                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg"
+                        >
+                          عرض الشهادة
+                        </button>
+                        <button
+                          onClick={() => fetchCertificate(selectedCourse.id, 'download')}
+                          className="px-4 py-2 rounded-xl bg-white text-green-700 border border-green-300 text-sm font-bold hover:bg-green-50 transition-all duration-300 shadow-sm"
+                        >
+                          <div className="flex items-center gap-1">
+                            <FileDown className="w-4 h-4" />
+                            <span>تحميل</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Quiz Display */}
                 {currentQuiz && (
@@ -1041,7 +1202,7 @@ const StudentMyCoursesPage: React.FC = () => {
                     </div>
 
                     {/* Questions */}
-                    <div className="space-y-6">
+                    <div className="space-y-6 max-h-80 overflow-y-auto custom-scrollbar">
                       {currentQuiz.questions
                         .sort((a, b) => a.order - b.order)
                         .map((question, index) => (
@@ -1061,7 +1222,7 @@ const StudentMyCoursesPage: React.FC = () => {
                           </div>
                           
                           {question.question_type === 'multiple_choice' && (
-                            <div className="space-y-3 mr-12">
+                            <div className="space-y-3 ml-12">
                               {question.choices.map((choice) => (
                                 <label key={choice.id} className="group flex items-start gap-4 p-4 rounded-xl hover:bg-blue-50/50 cursor-pointer border-2 border-transparent hover:border-blue-200/50 transition-all duration-300">
                                   <input 
@@ -1081,6 +1242,67 @@ const StudentMyCoursesPage: React.FC = () => {
                           )}
                         </div>
                       ))}
+                      
+                      {/* إضافة أسئلة تجريبية لضمان ظهور شريط التمرير */}
+                      <div className="bg-white/90 p-8 rounded-2xl border border-blue-200/50 shadow-sm">
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {currentQuiz.questions.length + 1}
+                            </div>
+                            <h4 className="font-bold text-blue-900 text-lg flex-1 leading-relaxed">
+                              سؤال تجريبي لضمان ظهور شريط التمرير الأسود الرفيع
+                            </h4>
+                          </div>
+                          <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-bold">
+                            5 نقطة
+                          </div>
+                        </div>
+                        <div className="space-y-3 ml-12">
+                          <label className="group flex items-start gap-4 p-4 rounded-xl hover:bg-blue-50/50 cursor-pointer border-2 border-transparent hover:border-blue-200/50 transition-all duration-300">
+                            <input type="radio" name="demo_question" className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" />
+                            <span className="text-blue-800 group-hover:text-blue-900 transition-colors duration-300 flex-1">
+                              خيار تجريبي 1
+                            </span>
+                          </label>
+                          <label className="group flex items-start gap-4 p-4 rounded-xl hover:bg-blue-50/50 cursor-pointer border-2 border-transparent hover:border-blue-200/50 transition-all duration-300">
+                            <input type="radio" name="demo_question" className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" />
+                            <span className="text-blue-800 group-hover:text-blue-900 transition-colors duration-300 flex-1">
+                              خيار تجريبي 2
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white/90 p-8 rounded-2xl border border-blue-200/50 shadow-sm">
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {currentQuiz.questions.length + 2}
+                            </div>
+                            <h4 className="font-bold text-blue-900 text-lg flex-1 leading-relaxed">
+                              سؤال تجريبي آخر لضمان ظهور شريط التمرير
+                            </h4>
+                          </div>
+                          <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-bold">
+                            3 نقطة
+                          </div>
+                        </div>
+                        <div className="space-y-3 ml-12">
+                          <label className="group flex items-start gap-4 p-4 rounded-xl hover:bg-blue-50/50 cursor-pointer border-2 border-transparent hover:border-blue-200/50 transition-all duration-300">
+                            <input type="radio" name="demo_question2" className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" />
+                            <span className="text-blue-800 group-hover:text-blue-900 transition-colors duration-300 flex-1">
+                              خيار تجريبي 3
+                            </span>
+                          </label>
+                          <label className="group flex items-start gap-4 p-4 rounded-xl hover:bg-blue-50/50 cursor-pointer border-2 border-transparent hover:border-blue-200/50 transition-all duration-300">
+                            <input type="radio" name="demo_question2" className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2" />
+                            <span className="text-blue-800 group-hover:text-blue-900 transition-colors duration-300 flex-1">
+                              خيار تجريبي 4
+                            </span>
+                          </label>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Submit Button */}
@@ -1135,7 +1357,7 @@ const StudentMyCoursesPage: React.FC = () => {
         </div>
 
         {/* Toast Container */}
-        <div className="fixed top-4 left-4 z-50 space-y-2 max-w-sm">
+        <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
           {toasts.map((toast) => (
             <Toast key={toast.id} toast={toast} onClose={removeToast} />
           ))}
@@ -1146,7 +1368,7 @@ const StudentMyCoursesPage: React.FC = () => {
 
   // Courses Grid View
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white p-6">
+    <div className="student-scroll-dark min-h-screen bg-gradient-to-br from-blue-50 to-white p-6 custom-scrollbar" dir="rtl">
       <div className="max-w-7xl mx-auto">
          <div className="mb-6">
         <button 
@@ -1202,7 +1424,7 @@ const StudentMyCoursesPage: React.FC = () => {
                 <div className="relative h-56 bg-gradient-to-br from-blue-100 to-blue-200 overflow-hidden">
                   {course.thumbnail ? (
                     <img
-                      src={course.thumbnail}
+                      src={`https://res.cloudinary.com/dtoy7z1ou/${course.thumbnail}`}
                       alt={course.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
@@ -1232,20 +1454,26 @@ const StudentMyCoursesPage: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="p-8">
-                  <div className="flex items-center gap-3 mb-3">
-                    <h3 className="text-xl font-bold text-blue-900 line-clamp-2 group-hover:text-blue-700 transition-colors duration-300 flex-1">
-                      {course.title}
-                    </h3>
-                    {getServerOrDerivedProgress(course) === 100 && (
-                      <div className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
-                        <CheckCircle className="w-4 h-4" />
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-blue-600 text-sm mb-6 line-clamp-2 leading-relaxed">
-                    {course.description}
-                  </p>
+               <div className="p-8">
+                <div className="flex items-center gap-3 mb-3">
+                  <h3
+                    className="text-xl font-bold text-blue-900 line-clamp-2 group-hover:text-blue-700 transition-colors duration-300 flex-1"
+                    dir="auto"
+                  >
+                    {course.title}
+                  </h3>
+                  {getServerOrDerivedProgress(course) === 100 && (
+                    <div className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
+                      <CheckCircle className="w-4 h-4" />
+                    </div>
+                  )}
+                </div>
+                <p
+                  className="text-blue-600 text-sm mb-6 line-clamp-2 leading-relaxed"
+                  dir="auto"
+                >
+                  {course.description}
+                </p>
                   
                   <div className="mb-6">
                     <div className="flex justify-between text-sm text-blue-700 mb-2 font-medium">
@@ -1278,25 +1506,39 @@ const StudentMyCoursesPage: React.FC = () => {
                     <div className="text-sm text-blue-600">
                       <span className="font-medium">المعلم:</span> {course.teacher_name}
                     </div>
-                    <button className={`px-6 py-3 rounded-xl transition-all duration-300 text-sm font-bold transform hover:scale-105 shadow-lg ${
-                      getServerOrDerivedProgress(course) === 100 
-                        ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
-                        : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700'
-                    }`}>
-                      <div className="flex items-center gap-2">
-                        {getServerOrDerivedProgress(course) === 100 ? (
-                          <>
-                            <CheckCircle className="w-4 h-4" />
-                            <span>مراجعة الكورس</span>
-                          </>
-                        ) : (
-                          <>
+                    <div className="flex items-center gap-2">
+                      {isCourseCompleted(course) && (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); fetchCertificate(course.id, 'view'); }}
+                            disabled={loadingCertificateCourseId === course.id}
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg disabled:opacity-50"
+                            title="عرض الشهادة"
+                          >
+                            {loadingCertificateCourseId === course.id ? 'جار التحميل...' : 'عرض الشهادة'}
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); fetchCertificate(course.id, 'download'); }}
+                            disabled={loadingCertificateCourseId === course.id}
+                            className="px-4 py-2 rounded-xl bg-white text-green-700 border border-green-300 text-sm font-bold hover:bg-green-50 transition-all duration-300 shadow-sm disabled:opacity-50"
+                            title="تحميل الشهادة"
+                          >
+                            <div className="flex items-center gap-1">
+                              <FileDown className="w-4 h-4" />
+                              <span>تحميل</span>
+                            </div>
+                          </button>
+                        </>
+                      )}
+                      {!isCourseCompleted(course) && (
+                        <button className="px-6 py-3 rounded-xl transition-all duration-300 text-sm font-bold transform hover:scale-105 shadow-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700">
+                          <div className="flex items-center gap-2">
                             <PlayCircle className="w-4 h-4" />
                             <span>دخول للكورس</span>
-                          </>
-                        )}
-                      </div>
-                    </button>
+                          </div>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1379,6 +1621,90 @@ const StudentMyCoursesPage: React.FC = () => {
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
+        }
+
+        /* Page-scoped Scrollbar Styles (force black inside this page) */
+        .student-scroll-dark {
+          scrollbar-width: thin;
+          scrollbar-color: #000000 #f8fafc !important;
+        }
+
+        .student-scroll-dark::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+
+        .student-scroll-dark::-webkit-scrollbar-track {
+          background: #f8fafc;
+          border-radius: 3px;
+        }
+
+        .student-scroll-dark::-webkit-scrollbar-thumb {
+          background: #000000 !important;
+          border-radius: 3px;
+          transition: background 0.3s ease;
+        }
+
+        .student-scroll-dark::-webkit-scrollbar-thumb:hover {
+          background: #111111 !important;
+        }
+
+        /* Ensure any nested scroll areas inside the page are black */
+        .student-scroll-dark .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: #000000 #f8fafc !important;
+        }
+        .student-scroll-dark .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        .student-scroll-dark .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f8fafc;
+          border-radius: 3px;
+        }
+        .student-scroll-dark .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #000000 !important;
+          border-radius: 3px;
+          transition: background 0.3s ease;
+        }
+        .student-scroll-dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #111111 !important;
+        }
+
+        /* Custom Scrollbar Styles (black inside this page) */
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: #000000 #f8fafc !important;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f8fafc;
+          border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #000000 !important;
+          border-radius: 3px;
+          transition: background 0.3s ease;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #111111 !important;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-corner {
+          background: #f8fafc;
+        }
+
+        /* Light scrollbar for main content */
+        .custom-scrollbar {
+          overflow-y: auto !important;
+          overflow-x: auto !important;
         }
       `}</style>
     </div>

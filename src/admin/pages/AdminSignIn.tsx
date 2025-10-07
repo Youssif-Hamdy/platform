@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState} from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Lock, BookOpen, Eye, EyeOff, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
@@ -70,90 +70,7 @@ const SignIn: React.FC = () => {
   });
 
   // Function to handle refresh token
-  const refreshToken = async () => {
-    try {
-      const refreshToken = authState.refreshToken;
-      if (!refreshToken) return null;
 
-      const response = await fetch('/user/token/refresh/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refresh: refreshToken })
-      });
-
-      if (!response.ok) {
-        setAuthState(prev => ({
-          ...prev,
-          accessToken: null,
-          refreshToken: null
-        }));
-        return null;
-      }
-
-      const data = await response.json();
-      localStorage.setItem('accessToken', data.access);
-      setAuthState(prev => ({
-        ...prev,
-        accessToken: data.access
-      }));
-      return data.access;
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      return null;
-    }
-  };
-
-  // Function to clear auth data from localStorage
-  const clearAuthData = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('displayName');
-    localStorage.removeItem('userType');
-    localStorage.removeItem('profileImageUrl');
-    localStorage.removeItem('verificationToken');
-    setAuthState({
-      accessToken: null,
-      refreshToken: null,
-      userData: null,
-      displayName: null,
-      userType: null,
-      profileImageUrl: null,
-      verificationToken: null
-    });
-  };
-
-  // Function to make authenticated requests with token refresh
-  const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
-    let accessToken = authState.accessToken;
-    let response = await fetch(url, {
-      ...options,
-      headers: {
-        ...options.headers,
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      }
-    });
-
-    // If token is expired, try to refresh it
-    if (response.status === 401) {
-      const newAccessToken = await refreshToken();
-      if (newAccessToken) {
-        response = await fetch(url, {
-          ...options,
-          headers: {
-            ...options.headers,
-            'Authorization': `Bearer ${newAccessToken}`,
-            'Content-Type': 'application/json',
-          }
-        });
-      }
-    }
-
-    return response;
-  };
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });

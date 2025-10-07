@@ -382,7 +382,7 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ onBack }) => {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes slideUp {
           from {
             opacity: 0;

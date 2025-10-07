@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, X, CheckCircle, Activity, MessageCircle, Send, Mail, Phone } from 'lucide-react';
+import { AlertTriangle, X,  MessageCircle, Send, Mail } from 'lucide-react';
 
 interface SettingsPageProps {
   showToast: (type: 'success' | 'error' | 'info', message: string) => void;
@@ -147,6 +147,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ showToast }) => {
       });
       
       if (res.ok) {
+        // @ts-ignore
+
         const data = await res.json();
         showToast('success', 'تم الارسال الي الدعم بنجاح');
         setShowSupportModal(false);
@@ -192,6 +194,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ showToast }) => {
       });
       
       if (res.ok) {
+        // @ts-ignore
+
         const data = await res.json();
         showToast('success', 'تم إرسال رسالتك بنجاح');
         setShowContactModal(false);

@@ -47,7 +47,7 @@ const ParentDashboard: React.FC = () => {
 
   return (
     <Dashboard>
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-xl mx-auto" dir="rtl">
         <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">ربط حساب الابن</h2>
           <form onSubmit={submit} className="space-y-4">
@@ -66,7 +66,7 @@ const ParentDashboard: React.FC = () => {
               disabled={submitting}
               className={`w-full rounded-lg px-4 py-2 text-white shadow ${submitting ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'} transition`}
             >
-              {submitting ? '...جارِ الربط' : 'ربط'}
+              {submitting ? 'جارِ الربط...' : 'ربط'}
             </button>
           </form>
           {toast && (

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, CheckCircle, Clock, TrendingUp, BarChart3, Calendar, Eye, Target } from 'lucide-react';
+import { BookOpen, CheckCircle, Clock, TrendingUp, BarChart3,  Eye, Target, ChevronDown } from 'lucide-react';
 
 interface Child {
   id: number;
@@ -32,6 +32,8 @@ const ParentLessonsCompleted: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [childId, setChildId] = useState<number | null>(null);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
 
   const authFetch = async (url: string, init?: RequestInit) => {
     const token = localStorage.getItem('accessToken');
@@ -86,6 +88,7 @@ const ParentLessonsCompleted: React.FC = () => {
         const profileData = await res.json();
 
         if (profileData.children && profileData.children.length > 0) {
+          setChildren(profileData.children);
           const firstChildId = profileData.children[0].id;
           setChildId(firstChildId);
           loadLessonsData(firstChildId);
@@ -102,6 +105,12 @@ const ParentLessonsCompleted: React.FC = () => {
 
     fetchProfile();
   }, []);
+
+  const handleChildChange = (childId: number) => {
+    setChildId(childId);
+    setShowDropdown(false);
+    loadLessonsData(childId);
+  };
 
 
   if (loading) {
@@ -150,7 +159,11 @@ const ParentLessonsCompleted: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-6">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 p-6"
+      onClick={() => setShowDropdown(false)}
+      dir="rtl"
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -158,13 +171,55 @@ const ParentLessonsCompleted: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <BookOpen className="w-6 h-6 text-green-600" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <BookOpen className="w-6 h-6 text-green-600" />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900">الإطلاع على الدروس المنجزة</h1>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">الإطلاع على الدروس المنجزة</h1>
+            
+            {/* Child Selection Dropdown */}
+            {children.length > 1 && (
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDropdown(!showDropdown);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+                >
+                  <span className="text-gray-700">
+                    {children.find(child => child.id === childId)?.name || 'اختر الابن/الابنة'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                </button>
+                
+                {showDropdown && (
+                  <div 
+                    className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="py-2">
+                      {children.map((child) => (
+                        <button
+                          key={child.id}
+                          onClick={() => handleChildChange(child.id)}
+                          className={`w-full text-right px-4 py-2 hover:bg-gray-50 transition-colors ${
+                            childId === child.id ? 'bg-green-50 text-green-700' : 'text-gray-700'
+                          }`}
+                        >
+                          <div className="font-medium">{child.name}</div>
+                          <div className="text-sm text-gray-500">{child.username}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <p className="text-gray-600">متابعة تقدم {lessonsData.child.name} في إنجاز الدروس</p>
+          <p className="text-gray-600">متابعة تقدم {children.find(child => child.id === childId)?.name || 'الابن/الابنة'} في إنجاز الدروس</p>
         </motion.div>
 
         {/* Child Info Card */}

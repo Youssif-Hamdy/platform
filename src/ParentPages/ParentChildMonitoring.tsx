@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, BookOpen, TrendingUp, Calendar, Clock, Award, Target, BarChart3, Eye, UserCheck } from 'lucide-react';
+import { Users, BookOpen, TrendingUp, Award, Target, BarChart3, ChevronDown } from 'lucide-react';
 
 interface Child {
   id: number;
@@ -16,11 +16,6 @@ interface CourseProgress {
   completion_percentage: number;
 }
 
-interface QuizResult {
-  course_name: string;
-  quizzes_completed: number;
-  average_score: number;
-}
 
 interface MonitoringData {
   child: Child;
@@ -44,6 +39,8 @@ const ParentChildMonitoring: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [selectedChild, setSelectedChild] = useState<number | null>(null);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
 
   const authFetch = async (url: string, init?: RequestInit) => {
     const token = localStorage.getItem('accessToken');
@@ -116,6 +113,7 @@ const ParentChildMonitoring: React.FC = () => {
         const profileData = await res.json();
 
         if (profileData.children && profileData.children.length > 0) {
+          setChildren(profileData.children);
           const firstChildId = profileData.children[0].id;
           setSelectedChild(firstChildId);
           loadChildData(firstChildId);
@@ -132,6 +130,12 @@ const ParentChildMonitoring: React.FC = () => {
 
     fetchProfile();
   }, []);
+
+  const handleChildChange = (childId: number) => {
+    setSelectedChild(childId);
+    setShowDropdown(false);
+    loadChildData(childId);
+  };
 
   if (loading) {
     return (
@@ -165,7 +169,11 @@ const ParentChildMonitoring: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6"
+      onClick={() => setShowDropdown(false)}
+      dir="rtl"
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -173,13 +181,55 @@ const ParentChildMonitoring: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="w-6 h-6 text-blue-600" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900">متابعة الابن/الابنة</h1>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">متابعة الابن/الابنة</h1>
+            
+            {/* Child Selection Dropdown */}
+            {children.length > 1 && (
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDropdown(!showDropdown);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+                >
+                  <span className="text-gray-700">
+                    {children.find(child => child.id === selectedChild)?.name || 'اختر الابن/الابنة'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                </button>
+                
+                {showDropdown && (
+                  <div 
+                    className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="py-2">
+                      {children.map((child) => (
+                        <button
+                          key={child.id}
+                          onClick={() => handleChildChange(child.id)}
+                          className={`w-full text-right px-4 py-2 hover:bg-gray-50 transition-colors ${
+                            selectedChild === child.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                          }`}
+                        >
+                          <div className="font-medium">{child.name}</div>
+                          <div className="text-sm text-gray-500">{child.username}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <p className="text-gray-600">مراقبة تقدم {monitoringData.child.name} في التعلم</p>
+          <p className="text-gray-600">مراقبة تقدم {children.find(child => child.id === selectedChild)?.name || 'الابن/الابنة'} في التعلم</p>
         </motion.div>
 
         {/* Child Info Card */}

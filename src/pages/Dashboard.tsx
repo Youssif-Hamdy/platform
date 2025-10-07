@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, User, Activity, Settings, LogOut, LayoutDashboard, GraduationCap, FileText, Users, ChevronLeft, Menu, AlertTriangle, CheckCircle, Upload, Bell, Eye, Award, BarChart3 } from 'lucide-react';
+import { BookOpen, User, Activity, Settings, LogOut, LayoutDashboard, GraduationCap, FileText, Users, ChevronLeft, Menu, AlertTriangle, CheckCircle, Upload, Bell, Eye, Award, BarChart3, CreditCard } from 'lucide-react';
 import ProfilePage from './ProfilePage';
 import SettingsPage from './SettingsPage';
 import LinkChildPage from '../ParentPages/LinkChildPage';
@@ -13,6 +13,7 @@ import TeacherCourseDetails from '../TeachersPages/TeacherCourseDetails';
 import { ManageStudentsPage, EngagementReportsPage, SendNotificationsPage } from '../TeachersPages/TeacherPlaceholders';
 import TeacherAddQuiz from '../TeachersPages/TeacherAddQuiz';
 import TeacherUploadContent from '../TeachersPages/TeacherUploadContent';
+import TeacherPaymentsPage from '../TeachersPages/TeacherPaymentsPage';
 import StudentCoursesPage from '../StudentsPages/StudentCoursesPage';
 import StudentMyCoursesPage from '../StudentsPages/StudentMyCoursesPage';
 import StudentCourseDetailsPage from '../StudentsPages/StudentCourseDetailsPage';
@@ -72,6 +73,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     | 'teacherUploadContent'
     | 'teacherAddExams'
     | 'teacherManageStudents'
+    | 'teacherPayments'
     | 'teacherEngagementReports'
     | 'teacherSendNotifications'
     | 'teacherCoursesList'
@@ -329,6 +331,8 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
         return <TeacherAddQuiz />;
       case 'teacherManageStudents':
         return <ManageStudentsPage />;
+      case 'teacherPayments':
+        return <TeacherPaymentsPage />;
       case 'teacherEngagementReports':
         return <EngagementReportsPage />;
       case 'teacherSendNotifications':
@@ -445,7 +449,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
 
       {/* Desktop inline header inside content area (no overlap with sidebar) */}
       <div className={`hidden md:block ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses')
- ? '!hidden' : ''}`} style={{ marginLeft: isDesktop ? (sidebarCollapsed ? 80 : 256) : 0, transition: 'margin-left 300ms ease-in-out' }}>
+ ? '!hidden' : ''}`} style={{ marginRight: isDesktop ? (sidebarCollapsed ? 80 : 256) : 0, transition: 'margin-right 300ms ease-in-out' }}>
         <div className="h-14 flex items-center justify-end px-4 border-b border-gray-100 bg-white/70 backdrop-blur-md">
           {isStudentUser && <NotificationsButton />}
           <button className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-blue-50 text-gray-700 shadow" aria-label="Settings">
@@ -458,8 +462,8 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       </div>
 
       {/* Sidebar (desktop) */}
-      <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} transition-[width] duration-300 fixed left-0 top-0 bottom-0 bg-white/80 backdrop-blur-xl border-r border-gray-100 z-60 hidden md:flex ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses')
- ? '!hidden' : ''}`}>
+      <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} transition-[width] duration-300 fixed right-0 top-0 bottom-0 bg-white/80 backdrop-blur-xl border-l border-gray-100 z-60 hidden md:flex ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses')
+? '!hidden' : ''}`} dir="rtl">
         <div className="w-full h-full p-4 overflow-y-auto">
           <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-4`}>
             {!sidebarCollapsed && (
@@ -473,15 +477,17 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
             </button>
           </div>
           <nav className="space-y-1">
-            <button 
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                currentPage === 'dashboard' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-              }`}
-              onClick={() => setCurrentPage('dashboard')}
-            >
-              <LayoutDashboard className="w-5 h-5" />
-              {!sidebarCollapsed && <span className="text-sm">لوحة التحكم</span>}
-            </button>
+            {!isTeacherUser && !isParentUser && (
+              <button 
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                  currentPage === 'dashboard' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+                onClick={() => setCurrentPage('dashboard')}
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                {!sidebarCollapsed && <span className="text-sm">لوحة التحكم</span>}
+              </button>
+            )}
             {isTeacherUser ? (
               <>
                 <button
@@ -528,6 +534,15 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
                 >
                   <Users className="w-5 h-5" />
                   {!sidebarCollapsed && <span className="text-sm">إدارة الطلاب المسجلين</span>}
+                </button>
+                <button
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'teacherPayments' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => setCurrentPage('teacherPayments')}
+                >
+                  <CreditCard className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="text-sm">إدارة المدفوعات</span>}
                 </button>
                 <button
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
@@ -669,7 +684,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
             <Settings className="w-5 h-5" />
             {!sidebarCollapsed && <span className="text-sm">الإعدادات</span>}
           </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition" onClick={() => { localStorage.clear(); window.location.href = '/signin'; }}>
+          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition" onClick={() => {  window.location.href = '/'; }}>
             <LogOut className="w-5 h-5" />
             {!sidebarCollapsed && <span className="text-sm">خروج</span>}
           </button>
@@ -679,22 +694,24 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       {/* Sidebar (mobile drawer) */}
       <div className={`fixed inset-0 z-60 md:hidden ${mobileSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'} ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails'||currentPage === 'studentMyCourses') ? '!hidden' : ''}`}>
         <div className={`absolute inset-0 bg-black/30 transition-opacity ${mobileSidebarOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setMobileSidebarOpen(false)} />
-        <div className={`absolute top-0 bottom-0 left-0 w-64 bg-white shadow-xl transition-transform ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className={`absolute top-0 bottom-0 right-0 w-64 bg-white shadow-xl transition-transform ${mobileSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`} dir="rtl">
           <div className="h-full p-4 overflow-y-auto">
             <div className="flex items-center gap-2 mb-4">
               <BookOpen className="h-6 w-6 text-blue-600" />
               <span className="text-base font-bold text-gray-900">تعلم</span>
             </div>
             <nav className="space-y-1">
-              <button 
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                  currentPage === 'dashboard' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-                }`}
-                onClick={() => { setMobileSidebarOpen(false); setCurrentPage('dashboard'); }}
-              >
-                <LayoutDashboard className="w-5 h-5" />
-                <span className="text-sm">لوحة التحكم</span>
-              </button>
+              {!isTeacherUser && !isParentUser && (
+                <button 
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                    currentPage === 'dashboard' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  onClick={() => { setMobileSidebarOpen(false); setCurrentPage('dashboard'); }}
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  <span className="text-sm">لوحة التحكم</span>
+                </button>
+              )}
               {isTeacherUser ? (
                 <>
                   <button 
@@ -741,6 +758,15 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
                   >
                     <Users className="w-5 h-5" />
                     <span className="text-sm">إدارة الطلاب المسجلين</span>
+                  </button>
+                  <button 
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                      currentPage === 'teacherPayments' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                    onClick={() => { setMobileSidebarOpen(false); setCurrentPage('teacherPayments'); }}
+                  >
+                    <CreditCard className="w-5 h-5" />
+                    <span className="text-sm">إدارة المدفوعات</span>
                   </button>
                   <button 
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition ${
@@ -893,10 +919,10 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     ? 'p-0' 
     : 'px-4 sm:px-6 lg:px-8 pt-12 md:pt-6'}`}
   style={{ 
-    marginLeft: (currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses') 
+    marginRight: (currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses') 
       ? 0 
       : (isDesktop ? (sidebarCollapsed ? 80 : 256) : 0), 
-    transition: 'margin-left 300ms ease-in-out' 
+    transition: 'margin-right 300ms ease-in-out' 
   }}
 >
   {children ? (

@@ -1,16 +1,18 @@
-import React, { useEffect } from "react";
+import React, { useEffect, Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Home from "./pages/Home";
-import SignIn from "./pages/SignIn";
-import VerifyEmail from "./component/VerifyEmail";
-import PasswordResetPage from "./pages/PasswordResetPage";
-import Dashboard from "./pages/Dashboard";
-import QuizResultsPage from "./pages/QuizResultsPage";
-import AdminDashboard from "./admin/AdminDashboard";
-import TeacherDashboard from "./TeachersPages/TeacherDashboard";
-import StudentDashboard from "./StudentsPages/StudentDashboard";
-import ParentDashboard from "./ParentPages/ParentDashboard";
-import AdminSignIn from "./admin/pages/AdminSignIn";
+
+const Home = lazy(() => import("./pages/Home"));
+const SignIn = lazy(() => import("./pages/SignIn"));
+const VerifyEmail = lazy(() => import("./component/VerifyEmail"));
+const PasswordResetPage = lazy(() => import("./pages/PasswordResetPage"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const QuizResultsPage = lazy(() => import("./pages/QuizResultsPage"));
+const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
+const TeacherDashboard = lazy(() => import("./TeachersPages/TeacherDashboard"));
+const StudentDashboard = lazy(() => import("./StudentsPages/StudentDashboard"));
+const ParentDashboard = lazy(() => import("./ParentPages/ParentDashboard"));
+const AdminSignIn = lazy(() => import("./admin/pages/AdminSignIn"));
+const StudentCertificatePage = lazy(() => import("./pages/StudentCertificatePage"));
 
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -70,6 +72,7 @@ const App: React.FC = () => {
   }, []);
 
   return (
+    <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}>جارِ التحميل...</div>}>
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/signin" element={<SignIn />} />
@@ -133,12 +136,21 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/student/certificate/:course_id"
+        element={
+          <ProtectedRoute>
+            <StudentCertificatePage />
+          </ProtectedRoute>
+        }
+      />
     
 
 
 
 
     </Routes>
+    </Suspense>
 
 
   );

@@ -46,7 +46,7 @@ const LinkChildPage: React.FC = () => {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} dir="rtl">
       <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">ربط حساب الابن</h1>
       
       <div className="max-w-xl mx-auto">
@@ -68,7 +68,7 @@ const LinkChildPage: React.FC = () => {
               disabled={submitting}
               className={`w-full rounded-lg px-4 py-2 text-white shadow ${submitting ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'} transition`}
             >
-              {submitting ? '...جارِ الربط' : 'ربط'}
+              {submitting ? 'جارِ الربط...' : 'ربط'}
             </button>
           </form>
           {toast && (

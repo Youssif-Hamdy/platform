@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Users, AlertCircle, RefreshCw, Search, GraduationCap, CalendarDays, Send, BookOpen, Check, CheckCircle2, Bell } from 'lucide-react';
+import { Users, AlertCircle, RefreshCw, Search, GraduationCap, CalendarDays, Send, BookOpen, Check, CheckCircle2, Bell, CreditCard } from 'lucide-react';
 
 export const UploadContentPage: React.FC = () => (
-  <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm">
+  <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm" dir="rtl">
     <h2 className="text-lg font-bold text-gray-900 mb-2">رفع الفيديوهات والمحتوى</h2>
     <p className="text-gray-600 text-sm">سيتم التنفيذ لاحقًا.</p>
   </div>
 );
 
 export const AddExamsPage: React.FC = () => (
-  <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm">
+  <div className="max-w-2xl mx-auto bg-white/80 backdrop-blur rounded-xl border border-gray-100 p-4 sm:p-6 shadow-sm" dir="rtl">
     <h2 className="text-lg font-bold text-gray-900 mb-2">إضافة اختبارات</h2>
     <p className="text-gray-600 text-sm">سيتم التنفيذ لاحقًا.</p>
   </div>
@@ -125,7 +125,7 @@ export const ManageStudentsPage: React.FC = () => {
   const pendingCount = useMemo(() => enrollments.filter(e => e.status === 'pending').length, [enrollments]);
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto" dir="rtl">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center">
@@ -136,14 +136,23 @@ export const ManageStudentsPage: React.FC = () => {
             <p className="text-gray-600 text-sm">عرض كل التسجيلات عبر المسار /teacher/enrollments/</p>
           </div>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={reloading}
-          className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-gray-700 flex items-center gap-2 disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${reloading ? 'animate-spin' : ''}`} />
-          <span className="hidden sm:inline">تحديث</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => window.open('/teacher/payments', '_blank')}
+            className="px-3 py-2 bg-green-500 text-white rounded-lg shadow-sm hover:bg-green-600 flex items-center gap-2 transition-colors"
+          >
+            <CreditCard className="w-4 h-4" />
+            <span className="hidden sm:inline">إدارة المدفوعات</span>
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={reloading}
+            className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-gray-700 flex items-center gap-2 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${reloading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">تحديث</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -467,7 +476,7 @@ export const EngagementReportsPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto" dir="rtl">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center">
@@ -944,52 +953,52 @@ export const SendNotificationsPage: React.FC = () => {
 );
   }
  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 p-2 sm:p-4" dir="rtl">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white/90 backdrop-blur-lg rounded-2xl border border-blue-100 shadow-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl">
+        <div className="bg-white/90 backdrop-blur-lg rounded-xl sm:rounded-2xl border border-blue-100 shadow-xl overflow-hidden transform transition-all duration-300 hover:shadow-2xl">
           
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white relative overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 sm:p-6 text-white relative overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
-            <div className="relative z-10 flex items-center space-x-4 rtl:space-x-reverse">
-              <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm">
-                <Bell className="w-6 h-6" />
+            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 space-x-0 sm:space-x-4 space-x-reverse">
+              <div className="p-2 sm:p-3 bg-white/20 rounded-full backdrop-blur-sm">
+                <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold">إرسال إشعارات للطلاب</h2>
-                <p className="text-blue-100 text-sm mt-1">قم بإرسال إشعارات مخصصة للطلاب أو الدورات</p>
+              <div className="flex-1">
+                <h2 className="text-xl sm:text-2xl font-bold">إرسال إشعارات للطلاب</h2>
+                <p className="text-blue-100 text-xs sm:text-sm mt-1">قم بإرسال إشعارات مخصصة للطلاب أو الدورات</p>
               </div>
             </div>
           </div>
 
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             {/* Alert Messages */}
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-lg transform transition-all duration-300 animate-pulse">
+              <div className="mb-6 p-4 bg-red-50 border-r-4 border-red-400 rounded-lg transform transition-all duration-300 animate-pulse">
                 <div className="flex items-center">
-                  <AlertCircle className="w-5 h-5 text-red-400 mr-3" />
+                  <AlertCircle className="w-5 h-5 text-red-400 ml-3" />
                   <p className="text-red-700">{error}</p>
                 </div>
               </div>
             )}
 
             {success && (
-              <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-400 rounded-lg transform transition-all duration-300 animate-bounce">
+              <div className="mb-6 p-4 bg-green-50 border-r-4 border-green-400 rounded-lg transform transition-all duration-300 animate-bounce">
                 <div className="flex items-center">
-                  <CheckCircle2 className="w-5 h-5 text-green-400 mr-3" />
+                  <CheckCircle2 className="w-5 h-5 text-green-400 ml-3" />
                   <p className="text-green-700">{success}</p>
                 </div>
               </div>
             )}
 
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               
               {/* Notification Type */}
-              <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100">
+              <div className="bg-blue-50/50 p-4 sm:p-6 rounded-xl border border-blue-100">
                 <label className="block text-lg font-semibold text-blue-900 mb-4">
                   نوع الإشعار
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                   <label className="relative group cursor-pointer">
                     <input
                       type="radio"
@@ -1003,13 +1012,13 @@ export const SendNotificationsPage: React.FC = () => {
                         ? 'border-blue-500 bg-blue-100 shadow-md' 
                         : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
                     }`}>
-                      <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                      <div className="flex items-center space-x-3 space-x-reverse">
                         <Users className={`w-5 h-5 ${notificationType === 'teacher_students' ? 'text-blue-600' : 'text-gray-400'}`} />
                         <span className={`font-medium ${notificationType === 'teacher_students' ? 'text-blue-900' : 'text-gray-700'}`}>
                           إشعار للطلاب
                         </span>
                         {notificationType === 'teacher_students' && (
-                          <Check className="w-4 h-4 text-blue-600 mr-auto" />
+                          <Check className="w-4 h-4 text-blue-600 ml-auto" />
                         )}
                       </div>
                     </div>
@@ -1028,13 +1037,13 @@ export const SendNotificationsPage: React.FC = () => {
                         ? 'border-blue-500 bg-blue-100 shadow-md' 
                         : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
                     }`}>
-                      <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                      <div className="flex items-center space-x-3 space-x-reverse">
                         <BookOpen className={`w-5 h-5 ${notificationType === 'teacher_course' ? 'text-blue-600' : 'text-gray-400'}`} />
                         <span className={`font-medium ${notificationType === 'teacher_course' ? 'text-blue-900' : 'text-gray-700'}`}>
                           إشعار للدورات
                         </span>
                         {notificationType === 'teacher_course' && (
-                          <Check className="w-4 h-4 text-blue-600 mr-auto" />
+                          <Check className="w-4 h-4 text-blue-600 ml-auto" />
                         )}
                       </div>
                     </div>
@@ -1044,14 +1053,14 @@ export const SendNotificationsPage: React.FC = () => {
 
               {/* Title */}
               <div className="group">
-                <label className="block text-lg font-semibold text-gray-800 mb-3">
+                <label className="block text-base sm:text-lg font-semibold text-gray-800 mb-3">
                   عنوان الإشعار *
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 group-hover:border-blue-300"
+                  className="w-full px-3 py-3 sm:px-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 group-hover:border-blue-300 text-sm sm:text-base"
                   placeholder="أدخل عنوان الإشعار"
                   required
                 />
@@ -1059,14 +1068,14 @@ export const SendNotificationsPage: React.FC = () => {
 
               {/* Message */}
               <div className="group">
-                <label className="block text-lg font-semibold text-gray-800 mb-3">
+                <label className="block text-base sm:text-lg font-semibold text-gray-800 mb-3">
                   نص الرسالة *
                 </label>
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 resize-none group-hover:border-blue-300"
+                  className="w-full px-3 py-3 sm:px-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 resize-none group-hover:border-blue-300 text-sm sm:text-base"
                   placeholder="أدخل نص الرسالة"
                   required
                 />
@@ -1074,56 +1083,144 @@ export const SendNotificationsPage: React.FC = () => {
 
               {/* Students Selection */}
               {notificationType === 'teacher_students' && (
-                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="bg-gray-50 p-4 sm:p-6 rounded-xl border border-gray-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 space-y-2 sm:space-y-0">
                     <label className="block text-lg font-semibold text-gray-800">
                       اختيار الطلاب *
                     </label>
                     <button
                       type="button"
                       onClick={handleSelectAllStudents}
-                      className="px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-all duration-300 font-medium"
+                      className="w-full sm:w-auto px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-lg transition-all duration-300 font-medium border border-blue-200"
                     >
                       {selectedStudents.length === students.length ? 'إلغاء الكل' : 'اختيار الكل'}
                     </button>
                   </div>
-                  <div className="max-h-64 overflow-y-auto border-2 border-gray-200 rounded-xl p-4 bg-white">
-                    {students.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-gray-500">لا يوجد طلاب متاحون</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {students.map((student) => (
-                          <label key={student.id} className="flex items-center p-3 rounded-lg hover:bg-blue-50 transition-all duration-200 cursor-pointer group">
-                            <input
-                              type="checkbox"
-                              checked={selectedStudents.includes(student.id)}
-                              onChange={() => handleStudentToggle(student.id)}
-                              className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                                <span className="font-medium text-gray-800 group-hover:text-blue-800 transition-colors">
-                                  {student.first_name} {student.last_name}
-                                </span>
-                                <span className="text-sm text-gray-500">({student.email})</span>
+                  
+                  {students.length === 0 ? (
+                    <div className="text-center py-8 bg-white rounded-xl border-2 border-gray-200">
+                      <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-500">لا يوجد طلاب متاحون</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Mobile Cards View */}
+                      <div className="block sm:hidden max-h-80 overflow-y-auto">
+                        <div className="grid gap-3">
+                          {students.map((student) => (
+                            <div 
+                              key={student.id} 
+                              className={`bg-white rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02] ${
+                                selectedStudents.includes(student.id) 
+                                  ? 'border-blue-400 bg-blue-50 shadow-lg' 
+                                  : 'border-gray-200 hover:border-blue-300'
+                              }`}
+                              onClick={() => handleStudentToggle(student.id)}
+                            >
+                              <div className="p-4">
+                                <div className="flex items-start space-x-3 space-x-reverse">
+                                  <div className="flex-shrink-0">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedStudents.includes(student.id)}
+                                      onChange={() => handleStudentToggle(student.id)}
+                                      className="w-5 h-5 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 space-x-reverse mb-2">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                        selectedStudents.includes(student.id) 
+                                          ? 'bg-blue-100 text-blue-600' 
+                                          : 'bg-gray-100 text-gray-600'
+                                      }`}>
+                                        <Users className="w-5 h-5" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className={`font-semibold truncate ${
+                                          selectedStudents.includes(student.id) 
+                                            ? 'text-blue-900' 
+                                            : 'text-gray-900'
+                                        }`}>
+                                          {student.first_name} {student.last_name}
+                                        </h4>
+                                        <p className="text-sm text-gray-600 truncate">{student.email}</p>
+                                      </div>
+                                    </div>
+                                    
+                                    {student.course_title && (
+                                      <div className="flex items-center space-x-2 space-x-reverse mt-2">
+                                        <GraduationCap className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                                        <span className="text-xs text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full truncate">
+                                          {student.course_title}
+                                        </span>
+                                      </div>
+                                    )}
+                                    
+                                    {student.progress_percentage !== undefined && (
+                                      <div className="mt-2">
+                                        <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                          <span>التقدم</span>
+                                          <span>{student.progress_percentage}%</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                          <div 
+                                            className={`h-2 rounded-full transition-all duration-300 ${
+                                              student.progress_percentage >= 75 ? 'bg-green-500' :
+                                              student.progress_percentage >= 50 ? 'bg-blue-500' :
+                                              student.progress_percentage >= 25 ? 'bg-yellow-500' : 'bg-red-500'
+                                            }`}
+                                            style={{ width: `${student.progress_percentage}%` }}
+                                          ></div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              {student.course_title && (
-                                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full mt-1 inline-block">
-                                  دورة: {student.course_title}
-                                </span>
-                              )}
                             </div>
-                          </label>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    )}
-                  </div>
+
+                      {/* Desktop List View */}
+                      <div className="hidden sm:block max-h-64 overflow-y-auto border-2 border-gray-200 rounded-xl p-4 bg-white">
+                        <div className="space-y-3">
+                          {students.map((student) => (
+                            <label key={student.id} className="flex items-center p-3 rounded-lg hover:bg-blue-50 transition-all duration-200 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={selectedStudents.includes(student.id)}
+                                onChange={() => handleStudentToggle(student.id)}
+                                className="w-4 h-4 text-blue-600 border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ml-3"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 space-x-reverse">
+                                  <span className="font-medium text-gray-800 group-hover:text-blue-800 transition-colors">
+                                    {student.first_name} {student.last_name}
+                                  </span>
+                                  <span className="text-sm text-gray-500">({student.email})</span>
+                                </div>
+                                {student.course_title && (
+                                  <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full mt-1 inline-block">
+                                    دورة: {student.course_title}
+                                  </span>
+                                )}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
                   {selectedStudents.length > 0 && (
-                    <div className="mt-3 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
-                      تم اختيار {selectedStudents.length} من {students.length} طالب
+                    <div className="mt-3 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                      <div className="flex items-center justify-between">
+                        <span>تم اختيار {selectedStudents.length} من {students.length} طالب</span>
+                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1131,15 +1228,15 @@ export const SendNotificationsPage: React.FC = () => {
 
               {/* Course Selection */}
               {notificationType === 'teacher_course' && (
-                <div className="group">
-                  <label className="block text-lg font-semibold text-gray-800 mb-3">
+                <div className="bg-gray-50 p-4 sm:p-6 rounded-xl border border-gray-200">
+                  <label className="block text-base sm:text-lg font-semibold text-gray-800 mb-3">
                     اختيار الدورة *
                   </label>
                   <div className="relative">
                     <select
                       value={selectedCourse || ''}
                       onChange={(e) => setSelectedCourse(Number(e.target.value))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 appearance-none bg-white group-hover:border-blue-300"
+                      className="w-full px-3 py-3 sm:px-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 appearance-none bg-white hover:border-blue-300 text-sm sm:text-base"
                       required
                     >
                       <option value="">اختر دورة</option>
@@ -1149,23 +1246,31 @@ export const SendNotificationsPage: React.FC = () => {
                         </option>
                       ))}
                     </select>
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <BookOpen className="w-4 h-4 text-gray-400" />
+                    </div>
                   </div>
+                  {courses.length === 0 && (
+                    <p className="mt-2 text-sm text-gray-500 bg-yellow-50 p-2 rounded-lg border border-yellow-200">
+                      لا توجد دورات متاحة
+                    </p>
+                  )}
                 </div>
               )}
 
               {/* Submit Button */}
-              <div className="flex justify-end pt-4">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={handleSubmit}
                   disabled={loading}
-                  className={`group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold text-lg shadow-lg transform transition-all duration-300 ${
+                  className={`group relative w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold text-base sm:text-lg shadow-lg transform transition-all duration-300 ${
                     loading 
                       ? 'opacity-75 cursor-not-allowed' 
                       : 'hover:from-blue-700 hover:to-blue-800 hover:scale-105 hover:shadow-xl active:scale-95'
                   }`}
                 >
-                  <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                  <div className="flex items-center justify-center space-x-3 space-x-reverse">
                     {loading ? (
                       <>
                         <RefreshCw className="w-5 h-5 animate-spin" />

@@ -110,6 +110,8 @@ const SignIn: React.FC = () => {
   };
 
   // Function to clear auth data from localStorage
+  // @ts-ignore
+
   const clearAuthData = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -130,6 +132,8 @@ const SignIn: React.FC = () => {
   };
 
   // Function to make authenticated requests with token refresh
+  // @ts-ignore
+
   const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
     let accessToken = authState.accessToken;
     let response = await fetch(url, {

@@ -18,6 +18,7 @@ import {
   Archive,
   CheckCircle
 } from 'lucide-react';
+import { LazySection } from '../utils/Perf';
 
 const API_BASE = '';
 
@@ -136,8 +137,8 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setStatusMessage(data.message || 'تم نشر الدورة بنجاح');
+        await response.json();
+        setStatusMessage('تم نشر الدورة بنجاح');
         setShowStatusModal(true);
         // تحديث حالة الدورة في القائمة
         setCourses(prev => prev.map(course => 
@@ -177,8 +178,8 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setStatusMessage(data.message || 'تم أرشفة الدورة بنجاح');
+        await response.json();
+        setStatusMessage('تم أرشفة الدورة بنجاح');
         setShowStatusModal(true);
         // تحديث حالة الدورة في القائمة
         setCourses(prev => prev.map(course => 
@@ -406,7 +407,7 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
+          <LazySection><div className="space-y-6">
             <div className={viewMode === 'grid' 
               ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
               : 'space-y-4'
@@ -430,7 +431,7 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
                           <img
                             src={course.thumbnail}
                             alt={course.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-full object-contain object-center bg-white"
                             onError={(e) => {
                               console.log('Image failed to load:', e.currentTarget.src);
                               e.currentTarget.style.display = 'none';
@@ -552,7 +553,7 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
                           <img
                             src={course.thumbnail}
                             alt={course.title}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain object-center bg-white"
                             onError={(e) => {
                               console.log('Image failed to load:', e.currentTarget.src);
                               e.currentTarget.style.display = 'none';
@@ -705,7 +706,7 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
                 </button>
               </div>
             )}
-          </div>
+          </div></LazySection>
         )}
       </div>
 
@@ -718,7 +719,7 @@ const TeacherCoursesList: React.FC<Props> = ({ onOpenCourse }) => {
                 <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">تم بنجاح</h3>
-              <p className="text-gray-600 mb-4 text-right leading-relaxed">{statusMessage}</p>
+              <p className="text-gray-600 mb-4  leading-relaxed">{statusMessage}</p>
               <button
                 onClick={() => setShowStatusModal(false)}
                 className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"

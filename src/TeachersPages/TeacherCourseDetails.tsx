@@ -7,8 +7,7 @@ import {
   Clock, 
   Eye, 
   Plus,
-  Edit,
-  Trash2,
+
   Video,
   File,
   HelpCircle,
@@ -81,6 +80,8 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
   const [isArchiving, setIsArchiving] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -287,11 +288,96 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar - قائمة الأقسام */}
+      {/* Mobile Sidebar Drawer */}
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 lg:hidden"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          >
+            <div className="absolute inset-0 bg-black/50" />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="absolute right-0 top-0 bottom-0 w-4/5 max-w-sm bg-white border-l border-gray-200 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <BookOpen className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-gray-900 text-sm">أقسام الكورس</h2>
+                    <p className="text-xs text-gray-600">{sections.length} قسم</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  aria-label="إغلاق القائمة الجانبية"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-2 overflow-y-auto flex-1">
+                {sections.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">لا توجد أقسام</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {sections.map((section, index) => (
+                      <motion.button
+                        key={section.id}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        onClick={() => {
+                          handleSectionClick(section);
+                          setIsMobileSidebarOpen(false);
+                        }}
+                        className={`w-full text-right p-3 rounded-lg transition-all duration-200 ${
+                          selectedSection?.id === section.id 
+                            ? 'bg-blue-50 border border-blue-200 text-blue-900' 
+                            : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          {section.content_type === 'video' ? (
+                            <Video className="w-4 h-4 text-blue-500" />
+                          ) : section.content_type === 'pdf' ? (
+                            <File className="w-4 h-4 text-red-500" />
+                          ) : (
+                            <FileText className="w-4 h-4 text-green-500" />
+                          )}
+                          <span className="font-medium text-sm truncate flex-1">{section.title}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>{section.duration_minutes || 0} دقيقة</span>
+                          <span className="bg-gray-100 px-2 py-1 rounded text-xs">{section.order || 0}</span>
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Sidebar - قائمة الأقسام (تظهر فقط على الشاشات الكبيرة) */}
       <motion.div
         initial={false}
         animate={{ width: sidebarCollapsed ? 64 : 320 }}
-        className="bg-white border-r border-gray-200 flex flex-col"
+        className="hidden lg:flex bg-white border-r border-gray-200 flex-col"
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-gray-200">
@@ -396,32 +482,41 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 p-6">
+        <div className="bg-white border-b border-gray-200 p-4 sm:p-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {course?.title || courseTitle || 'تفاصيل الكورس'}
-                </h1>
-                {course?.status && (
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    course.status === 'published' 
-                      ? 'bg-green-100 text-green-700' 
-                      : course.status === 'archived'
-                      ? 'bg-gray-100 text-gray-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {course.status === 'published' ? 'منشور' : 
-                     course.status === 'archived' ? 'مؤرشف' : 'مسودة'}
-                  </span>
-                )}
+            <div className="flex items-start justify-between lg:justify-start gap-3">
+              <button
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                aria-label="فتح القائمة الجانبية"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {course?.title || courseTitle || 'تفاصيل الكورس'}
+                  </h1>
+                  {course?.status && (
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      course.status === 'published' 
+                        ? 'bg-green-100 text-green-700' 
+                        : course.status === 'archived'
+                        ? 'bg-gray-100 text-gray-700'
+                        : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {course.status === 'published' ? 'منشور' : 
+                       course.status === 'archived' ? 'مؤرشف' : 'مسودة'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-gray-600 text-sm">
+                  {selectedSection ? `القسم: ${selectedSection.title}` : 'اختر قسماً لعرض محتواه'}
+                </p>
               </div>
-              <p className="text-gray-600 text-sm">
-                {selectedSection ? `القسم: ${selectedSection.title}` : 'اختر قسماً لعرض محتواه'}
-              </p>
             </div>
-            
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               {/* أزرار النشر والأرشفة */}
               {course?.status !== 'published' && (
                 <motion.button
@@ -460,6 +555,18 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                   </span>
                 </motion.button>
               )}
+
+              {onAddQuiz && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onAddQuiz(selectedSection ? selectedSection.title : (courseTitle || ''))}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="text-sm font-medium">إضافة اختبار</span>
+                </motion.button>
+              )}
               
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -484,7 +591,7 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
               className="p-6"
             >
               {/* Section Header */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+             <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center">
@@ -496,33 +603,45 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                         <FileText className="w-6 h-6 text-green-500" />
                       )}
                     </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900">{selectedSection.title}</h2>
+                    <div className="text-right w-full">
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900 break-words">
+                        {selectedSection.title}
+                      </h2>
                       {selectedSection.description && (
-                        <p className="text-gray-600 mt-1">{selectedSection.description}</p>
+                        <p
+                          dir="auto"  /* يحدد الاتجاه تلقائي حسب اللغة */
+                          className="hidden lg:block mt-1 leading-relaxed break-words text-gray-700"
+                        >
+                          {selectedSection.description}
+                        </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {onAddQuiz && (
-                      <motion.button 
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => onAddQuiz(selectedSection.title)} 
-                        className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>إضافة اختبار</span>
-                      </motion.button>
-                    )}
-                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-                      <Edit className="w-5 h-5" />
-                    </button>
-                    <button className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* عرض الوصف داخل مودال للموبايل */}
+                    <button
+                    onClick={() => setShowDescriptionModal(true)}
+                    className="
+                      inline-flex items-center gap-2 px-3 py-2 text-sm 
+                      border border-gray-200 rounded-lg 
+                      text-gray-700 hover:bg-gray-50
+                      sm:hidden   /* يخفي الزر من أول شاشات أكبر من الموبايل */
+                    "
+                    aria-label="عرض الوصف"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span className="whitespace-nowrap">عرض الوصف</span>
+                  </button>
+
+
+                 
+
+                 
+
+                
+                </div>
+
                 </div>
 
                 {/* Quick Stats */}
@@ -570,8 +689,8 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                       <FileText className="w-5 h-5 text-green-500" />
                       <span>المحتوى النصي</span>
                     </h3>
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-right">
+                    <div className="bg-gray-50 rounded-lg p-4 sm:p-6">
+                      <div className="text-gray-800 leading-relaxed whitespace-pre-wrap text-right break-words">
                         {selectedSection.content}
                       </div>
                     </div>
@@ -728,6 +847,41 @@ const TeacherCourseDetails: React.FC<Props> = ({ courseId, courseTitle, onAddQui
                 >
                   موافق
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Description Modal */}
+      <AnimatePresence>
+        {showDescriptionModal && selectedSection?.description && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowDescriptionModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">وصف القسم</h3>
+                <button
+                  onClick={() => setShowDescriptionModal(false)}
+                  className="w-9 h-9 inline-flex items-center justify-center rounded-lg hover:bg-gray-100"
+                  aria-label="إغلاق"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="text-right text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
+                {selectedSection.description}
               </div>
             </motion.div>
           </motion.div>

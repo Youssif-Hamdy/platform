@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, TrendingUp, BarChart3, Target, BookOpen, Star, Trophy, Medal } from 'lucide-react';
+import { Award, TrendingUp, BarChart3, Target, BookOpen, Star, Trophy, Medal, ChevronDown } from 'lucide-react';
 
 interface Child {
   id: number;
@@ -30,6 +30,8 @@ const ParentQuizGrades: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [childId, setChildId] = useState<number | null>(null);
+  const [children, setChildren] = useState<Child[]>([]);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
 
   const authFetch = async (url: string, init?: RequestInit) => {
     const token = localStorage.getItem('accessToken');
@@ -84,6 +86,7 @@ const ParentQuizGrades: React.FC = () => {
         const profileData = await res.json();
 
         if (profileData.children && profileData.children.length > 0) {
+          setChildren(profileData.children);
           const firstChildId = profileData.children[0].id;
           setChildId(firstChildId);
           loadQuizData(firstChildId);
@@ -100,6 +103,12 @@ const ParentQuizGrades: React.FC = () => {
 
     fetchProfile();
   }, []);
+
+  const handleChildChange = (childId: number) => {
+    setChildId(childId);
+    setShowDropdown(false);
+    loadQuizData(childId);
+  };
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -163,7 +172,11 @@ const ParentQuizGrades: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 p-6">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 p-6"
+      onClick={() => setShowDropdown(false)}
+      dir="rtl"
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -171,13 +184,55 @@ const ParentQuizGrades: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Award className="w-6 h-6 text-purple-600" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Award className="w-6 h-6 text-purple-600" />
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900">عرض درجات الاختبارات</h1>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">عرض درجات الاختبارات</h1>
+            
+            {/* Child Selection Dropdown */}
+            {children.length > 1 && (
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowDropdown(!showDropdown);
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+                            >
+                              <span className="text-gray-700">
+                                {childId ? children.find(child => child.id === childId)?.name || 'اختر الابن/الابنة' : 'اختر الابن/الابنة'}
+                              </span>
+                              <ChevronDown className="w-4 h-4 text-gray-500" />
+                            </button>
+                            
+                            {showDropdown && (
+                              <div 
+                                className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-10"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="py-2">
+                                  {children.map((child) => (
+                                    <button
+                                      key={child.id}
+                                      onClick={() => handleChildChange(child.id)}
+                                      className={`w-full text-right px-4 py-2 hover:bg-gray-50 transition-colors ${
+                                        childId === child.id ? 'bg-green-50 text-green-700' : 'text-gray-700'
+                                      }`}
+                                    >
+                                      <div className="font-medium">{child.name}</div>
+                                      <div className="text-sm text-gray-500">{child.username}</div>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
           </div>
-          <p className="text-gray-600">متابعة أداء {quizData.child.name} في الاختبارات</p>
+          <p className="text-gray-600">متابعة أداء {childId ? children.find(child => child.id === childId)?.name || 'الابن/الابنة' : 'الابن/الابنة'} في الاختبارات</p>
         </motion.div>
 
         {/* Summary Cards */}
@@ -338,8 +393,13 @@ const ParentQuizGrades: React.FC = () => {
                     <div className={`w-12 h-12 bg-gradient-to-br ${getGradeColor(course.average_score)} rounded-lg flex items-center justify-center`}>
                       {getGradeIcon(course.average_score)}
                     </div>
-                    <div>
-                      <h4 className="font-bold text-gray-900">{course.course_name}</h4>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-gray-900 truncate" title={course.course_name}>
+                        {course.course_name.length > 25 
+                          ? course.course_name.substring(0, 25) + '...'
+                          : course.course_name
+                        }
+                      </h4>
                       <p className="text-sm text-gray-600">{course.quizzes_completed} اختبار</p>
                     </div>
                   </div>
