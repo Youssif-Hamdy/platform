@@ -57,25 +57,7 @@ educational_platform/
 └── README.md                 # This file
 ```
 
-## Adding Images and Videos
 
-To add images or videos to your project:
-
-1. **Static Assets (Recommended for public content):**
-   - Place your images/videos in the `public/` folder
-   - Access them in your code using absolute paths: `/your-image.jpg`
-   - Example: `<img src="/logo.png" alt="Logo" />`
-
-2. **Component Assets (for dynamic imports):**
-   - Place in `src/assets/` folder
-   - Import them in your components: `import logo from '../assets/logo.png'`
-   - Use in JSX: `<img src={logo} alt="Logo" />`
-
-3. **Best Practices:**
-   - Use descriptive names for your files
-   - Optimize images for web (compress, appropriate formats)
-   - For videos, consider formats like MP4, WebM
-   - Use lazy loading for large media files
 
 ## 🚀 Features
 
