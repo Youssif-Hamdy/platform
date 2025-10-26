@@ -60,6 +60,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [isDesktop, setIsDesktop] = useState<boolean>(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   const [currentPage, setCurrentPage] = useState<
     | 'dashboard'
@@ -362,7 +363,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       case 'teacherAddExams':
         return <TeacherAddQuiz courseTitle={selectedCourse?.title} sectionTitle={selectedSectionTitle ?? undefined} />;
       case 'studentCourses':
-        return <StudentCoursesPage />;
+        return <StudentCoursesPage onModalStateChange={setIsModalOpen} />;
       case 'studentMyCourses':
         return <StudentMyCoursesPage />;
       case 'studentCourseDetails':
@@ -431,7 +432,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
 
       {/* Top headers */}
       {/* Mobile full-width header */}
-      <div className={`fixed top-0 inset-x-0 z-50 h-12 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 md:hidden ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses') ? '!hidden' : ''}`}>
+      <div className={`fixed top-0 inset-x-0 z-50 h-12 bg-white/90 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-3 md:hidden ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses') ? '!hidden' : ''} ${isModalOpen ? 'blur-sm' : ''}`}>
 
         <button onClick={() => setMobileSidebarOpen(true)} className="p-2 rounded-md bg-white border border-gray-200 shadow" aria-label="Open sidebar">
           <Menu className="w-5 h-5 text-blue-700" />
@@ -449,7 +450,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
 
       {/* Desktop inline header inside content area (no overlap with sidebar) */}
       <div className={`hidden md:block ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses')
- ? '!hidden' : ''}`} style={{ marginRight: isDesktop ? (sidebarCollapsed ? 80 : 256) : 0, transition: 'margin-right 300ms ease-in-out' }}>
+ ? '!hidden' : ''} ${isModalOpen ? 'blur-sm' : ''}`} style={{ marginRight: isDesktop ? (sidebarCollapsed ? 80 : 256) : 0, transition: 'margin-right 300ms ease-in-out' }}>
         <div className="h-14 flex items-center justify-end px-4 border-b border-gray-100 bg-white/70 backdrop-blur-md">
           {isStudentUser && <NotificationsButton />}
           <button className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-blue-50 text-gray-700 shadow" aria-label="Settings">
@@ -463,7 +464,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
 
       {/* Sidebar (desktop) */}
       <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} transition-[width] duration-300 fixed right-0 top-0 bottom-0 bg-white/80 backdrop-blur-xl border-l border-gray-100 z-60 hidden md:flex ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails' || currentPage === 'studentMyCourses')
-? '!hidden' : ''}`} dir="rtl">
+? '!hidden' : ''} ${isModalOpen ? 'blur-sm' : ''}`} dir="rtl">
         <div className="w-full h-full p-4 overflow-y-auto">
           <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-4`}>
             {!sidebarCollapsed && (
@@ -694,7 +695,7 @@ const Dashboard: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
       {/* Sidebar (mobile drawer) */}
       <div className={`fixed inset-0 z-60 md:hidden ${mobileSidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'} ${(currentPage === 'teacherCoursesList' || currentPage === 'teacherCourseDetails'||currentPage === 'studentMyCourses') ? '!hidden' : ''}`}>
         <div className={`absolute inset-0 bg-black/30 transition-opacity ${mobileSidebarOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setMobileSidebarOpen(false)} />
-        <div className={`absolute top-0 bottom-0 right-0 w-64 bg-white shadow-xl transition-transform ${mobileSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`} dir="rtl">
+        <div className={`absolute top-0 bottom-0 right-0 w-64 bg-white shadow-xl transition-transform ${mobileSidebarOpen ? 'translate-x-0' : 'translate-x-full'} ${isModalOpen ? 'blur-sm' : ''}`} dir="rtl">
           <div className="h-full p-4 overflow-y-auto">
             <div className="flex items-center gap-2 mb-4">
               <BookOpen className="h-6 w-6 text-blue-600" />

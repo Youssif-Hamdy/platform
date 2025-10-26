@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Activity, Award, BookOpen, Edit3, Save, X, Camera } from 'lucide-react';
+import { User,  Edit3, Save, X, Camera } from 'lucide-react';
 
 interface Profile {
   id?: number;
@@ -501,25 +501,7 @@ const avatarUrl = () => {
               </div>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">آخر الأنشطة</h2>
-              <div className="space-y-4">
-                {[1,2,3].map((i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center">
-                        {i === 1 ? <Activity className="w-5 h-5" /> : i === 2 ? <Award className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-gray-800">نشاط {i}</div>
-                        <div className="text-xs text-gray-500">وصف موجز للنشاط</div>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-400">اليوم</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+           
           </div>
         </motion.div>
       </div>

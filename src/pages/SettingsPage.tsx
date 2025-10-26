@@ -258,50 +258,56 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ showToast }) => {
           </div>
 
           {/* Account Settings */}
-          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">إعدادات الحساب</h2>
-            <div className="space-y-4">
-              <button className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
-                <div className="font-medium text-blue-900">تغيير كلمة المرور</div>
-                <div className="text-sm text-blue-700">تحديث كلمة المرور الخاصة بك</div>
-              </button>
-              
-              <button className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
-                <div className="font-medium text-blue-900">تحديث الملف الشخصي</div>
-                <div className="text-sm text-blue-700">تعديل المعلومات الشخصية</div>
-              </button>
-              
-              <button 
-                onClick={() => setShowSupportModal(true)}
-                className="w-full text-left p-3 bg-green-50 hover:bg-green-100 rounded-lg transition"
-              >
-                <div className="font-medium text-green-900 flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4" />
-                  الدعم الفني
-                </div>
-                <div className="text-sm text-green-700">إرسال تذكرة دعم فني مفصلة</div>
-              </button>
+         <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-sm p-6" dir="rtl">
+  <h2 className="text-lg font-semibold text-gray-800 mb-4 text-right">إعدادات الحساب</h2>
+  <div className="space-y-4">
+    <button className="w-full text-right p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+      <div className="font-medium text-blue-900">تغيير كلمة المرور</div>
+      <div className="text-sm text-blue-700">تحديث كلمة المرور الخاصة بك</div>
+    </button>
+    
+    <button className="w-full text-right p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+      <div className="font-medium text-blue-900">تحديث الملف الشخصي</div>
+      <div className="text-sm text-blue-700">تعديل المعلومات الشخصية</div>
+    </button>
+    
+   <button 
+  dir="rtl"
+  onClick={() => setShowSupportModal(true)}
+  className="w-full text-right p-3 bg-green-50 hover:bg-green-100 rounded-lg transition"
+>
+  <div className="font-medium text-green-900 flex items-center gap-2 justify-start">
+    <MessageCircle className="w-4 h-4" />
+    <span>الدعم الفني</span>
+  </div>
+  <div className="text-sm text-green-700 text-right">
+    إرسال تذكرة دعم فني مفصلة
+  </div>
+</button>
 
-              <button 
-                onClick={() => setShowContactModal(true)}
-                className="w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition"
-              >
-                <div className="font-medium text-purple-900 flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  اتصل بنا
-                </div>
-                <div className="text-sm text-purple-700">إرسال رسالة سريعة للدعم</div>
-              </button>
-              
-              <button 
-                onClick={() => setShowDeleteModal(true)}
-                className="w-full text-left p-3 bg-red-50 hover:bg-red-100 rounded-lg transition"
-              >
-                <div className="font-medium text-red-900">حذف الحساب</div>
-                <div className="text-sm text-red-700">حذف الحساب نهائياً</div>
-              </button>
-            </div>
-          </div>
+<button 
+  dir="rtl"
+  onClick={() => setShowContactModal(true)}
+  className="w-full text-right p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition"
+>
+  <div className="font-medium text-purple-900 flex items-center gap-2 justify-start">
+    <Mail className="w-4 h-4" />
+    <span>اتصل بنا</span>
+  </div>
+  <div className="text-sm text-purple-700 text-right">
+    إرسال رسالة سريعة للدعم
+  </div>
+</button>
+
+    <button 
+      onClick={() => setShowDeleteModal(true)}
+      className="w-full text-right p-3 bg-red-50 hover:bg-red-100 rounded-lg transition"
+    >
+      <div className="font-medium text-red-900">حذف الحساب</div>
+      <div className="text-sm text-red-700">حذف الحساب نهائياً</div>
+    </button>
+  </div>
+</div>
         </div>
       </motion.div>
 

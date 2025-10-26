@@ -133,7 +133,6 @@ export const ManageStudentsPage: React.FC = () => {
           </div>
           <div>
             <h2 className="text-xl md:text-2xl font-bold text-gray-900">إدارة الطلاب المسجلين</h2>
-            <p className="text-gray-600 text-sm">عرض كل التسجيلات عبر المسار /teacher/enrollments/</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -237,7 +236,6 @@ export const ManageStudentsPage: React.FC = () => {
                   <th className="px-4 py-3 font-semibold">البريد</th>
                   <th className="px-4 py-3 font-semibold">الكورس</th>
                   <th className="px-4 py-3 font-semibold">تاريخ التسجيل</th>
-                  <th className="px-4 py-3 font-semibold">الحالة</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
@@ -250,7 +248,6 @@ export const ManageStudentsPage: React.FC = () => {
                         </div>
                         <div>
                           <div className="font-medium text-gray-900">{e.student_name || '—'}</div>
-                          <div className="text-xs text-gray-500">ID: {e.student_id ?? '—'}</div>
                         </div>
                       </div>
                     </td>
@@ -262,7 +259,6 @@ export const ManageStudentsPage: React.FC = () => {
                         </div>
                         <div>
                           <div className="font-medium text-gray-900">{e.course_title || '—'}</div>
-                          <div className="text-xs text-gray-500">ID: {e.course_id ?? '—'}</div>
                         </div>
                       </div>
                     </td>
@@ -272,11 +268,7 @@ export const ManageStudentsPage: React.FC = () => {
                         <span>{e.enrolled_at ? new Date(e.enrolled_at).toLocaleString('ar-EG') : '—'}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${e.status === 'active' ? 'bg-green-100 text-green-700' : e.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {e.status || '—'}
-                      </span>
-                    </td>
+                   
                   </tr>
                 ))}
               </tbody>
@@ -625,7 +617,6 @@ export const EngagementReportsPage: React.FC = () => {
                   <th className="px-4 py-3 font-semibold">الكورس</th>
                   <th className="px-4 py-3 font-semibold">التقدم</th>
                   <th className="px-4 py-3 font-semibold">الاختبارات</th>
-                  <th className="px-4 py-3 font-semibold">وقت التعلم</th>
                   <th className="px-4 py-3 font-semibold">آخر نشاط</th>
                 </tr>
               </thead>
@@ -669,9 +660,7 @@ export const EngagementReportsPage: React.FC = () => {
                           {student.quizzes_passed}/{student.total_quizzes} اختبار
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {formatTimeSpent(student.total_time_spent_minutes)}
-                      </td>
+                    
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${activityStatus.color}`}>
                           {activityStatus.text}

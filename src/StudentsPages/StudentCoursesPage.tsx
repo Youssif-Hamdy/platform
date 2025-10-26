@@ -101,16 +101,16 @@ const ToastContainer: React.FC<{ toasts: Toast[]; removeToast: (id: string) => v
   };
 
   return (
-    <div className="fixed top-8 right-4 z-50 space-y-2 max-w-sm">
+    <div className="fixed top-8 left-4 z-50 space-y-2 max-w-sm">
       <AnimatePresence>
         {toasts.map((toast) => {
           const colors = getToastColors(toast.type);
           return (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, x: -100, scale: 0.8 }}
+              initial={{ opacity: 0, x: 100, scale: 0.8 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: -100, scale: 0.8 }}
+              exit={{ opacity: 0, x: 100, scale: 0.8 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
               className={`relative overflow-hidden rounded-xl border ${colors.bg} backdrop-blur-sm shadow-lg`}
             >
@@ -122,16 +122,16 @@ const ToastContainer: React.FC<{ toasts: Toast[]; removeToast: (id: string) => v
                 onAnimationComplete={() => removeToast(toast.id)}
               />
               
-              <div className="p-4 pr-10">
+              <div className="p-4 pr-12">
                 <div className="flex items-start gap-3">
-                  <div className={`flex-shrink-0 ${colors.icon}`}>
+                  <div className={`flex-shrink-0 ${colors.icon} mt-0.5`}>
                     {getToastIcon(toast.type)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className={`text-sm font-semibold ${colors.title} mb-1`}>
+                    <h4 className={`text-sm font-semibold ${colors.title} mb-1 leading-tight`}>
                       {toast.title}
                     </h4>
-                    <p className={`text-sm ${colors.message}`}>
+                    <p className={`text-sm ${colors.message} leading-relaxed`}>
                       {toast.message}
                     </p>
                   </div>
@@ -140,9 +140,9 @@ const ToastContainer: React.FC<{ toasts: Toast[]; removeToast: (id: string) => v
               
               <button
                 onClick={() => removeToast(toast.id)}
-                className="absolute top-2 left-2 p-1 rounded-lg hover:bg-black/5 transition-colors"
+                className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                <X className="w-4 h-4 text-gray-500" />
+                <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
               </button>
             </motion.div>
           );
@@ -202,7 +202,7 @@ const CourseModal: React.FC<{
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
         dir="rtl"
         onClick={onClose}
       >
@@ -425,7 +425,7 @@ const CourseModal: React.FC<{
 
 import { LazySection } from '../utils/Perf';
 
-const StudentCoursesPage: React.FC = () => {
+const StudentCoursesPage: React.FC<{ onModalStateChange?: (isOpen: boolean) => void }> = ({ onModalStateChange }) => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -561,7 +561,7 @@ const StudentCoursesPage: React.FC = () => {
       setIsModalOpen(false);
       setSelectedCourse(null);
       
-      addToast('success', 'تم الاشتراك بنجاح! 🎉', `تم اشتراكك في "${courseName}" بنجاح باستخدام ${paymentMethod}. يمكنك الآن الوصول إليه من صفحة "كورساتي"`);
+      addToast('success', 'تم الاشتراك بنجاح!', `تم اشتراكك في "${courseName}" بنجاح باستخدام ${paymentMethod}. يمكنك الآن الوصول إليه من صفحة "كورساتي"`);
       
     } catch (e) {
       console.error('Error enrolling:', e);
@@ -575,12 +575,14 @@ const StudentCoursesPage: React.FC = () => {
   const openCourseModal = useCallback((course: Course) => {
     setSelectedCourse(course);
     setIsModalOpen(true);
-  }, []);
+    onModalStateChange?.(true);
+  }, [onModalStateChange]);
 
   const closeCourseModal = useCallback(() => {
     setIsModalOpen(false);
     setSelectedCourse(null);
-  }, []);
+    onModalStateChange?.(false);
+  }, [onModalStateChange]);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {

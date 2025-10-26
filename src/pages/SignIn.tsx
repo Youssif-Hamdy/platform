@@ -1,6 +1,6 @@
 import React, { useState} from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Lock, BookOpen, Eye, EyeOff, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, BookOpen, Eye, EyeOff, CheckCircle, XCircle, AlertCircle, Image, Upload } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 
 
@@ -41,6 +41,7 @@ const SignIn: React.FC = () => {
   const [isLogin, setIsLogin] = useState<boolean>(true);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string>('');
   const navigate = useNavigate();
 
   
@@ -176,6 +177,7 @@ const SignIn: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
     setFormData(prev => ({ ...prev, profile_picture: file }));
+    setSelectedFileName(file ? file.name : '');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -533,9 +535,9 @@ navigate('/dashboard');
               initial={{ y: -50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.8 }}
-              className="text-center mb-12"
+              className="text-center mb-16"
             >
-              <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent mb-6">
+              <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent mb-8">
                 تعلم
               </h1>
               <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
@@ -844,13 +846,45 @@ navigate('/dashboard');
                                 {/* Row 7: Profile picture upload */}
                                 <div className="grid grid-cols-1 gap-4">
                                   <div className="relative">
-                                    <input
-                                      type="file"
-                                      name="profile_picture"
-                                      accept="image/*"
-                                      onChange={handleFileChange}
-                                      className="w-full pr-3 pl-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-right text-sm bg-gray-50/50 hover:bg-white"
-                                    />
+                                    <label className="block">
+                                      <div className="relative">
+                                        <input
+                                          type="file"
+                                          name="profile_picture"
+                                          accept="image/*"
+                                          onChange={handleFileChange}
+                                          className="sr-only"
+                                        />
+                                        <div className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-300 cursor-pointer group">
+                                          <div className="flex flex-col items-center space-y-3">
+                                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-300">
+                                              <Image className="w-6 h-6 text-blue-600" />
+                                            </div>
+                                            <div className="text-sm text-gray-600">
+                                              <p className="font-medium">اختر صورة من ملفك الشخصي</p>
+                                              <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF حتى 10MB</p>
+                                            </div>
+                                            <div className="flex items-center space-x-2 text-blue-600">
+                                              <Upload className="w-4 h-4" />
+                                              <span className="text-sm font-medium">اضغط للرفع</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </label>
+                                    {selectedFileName && (
+                                      <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg"
+                                      >
+                                        <div className="flex items-center space-x-2">
+                                          <CheckCircle className="w-4 h-4 text-green-600" />
+                                          <span className="text-sm text-green-800 font-medium">تم اختيار الملف:</span>
+                                          <span className="text-sm text-green-700">{selectedFileName}</span>
+                                        </div>
+                                      </motion.div>
+                                    )}
                                   </div>
                                 </div>
 
@@ -902,7 +936,7 @@ navigate('/dashboard');
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.5 }}
-                        className="text-center mt-6 text-sm text-gray-600"
+                        className="text-center mt-8 text-sm text-gray-600 "
                       >
                         {isLogin ? (
                           <p>
