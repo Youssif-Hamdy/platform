@@ -1,3 +1,0 @@
-- [x] Add simplified project explanation in English to README.md
-- [x] Add clear project structure section in English to README.md
-- [x] Add section on where to add images/videos in English to README.md
