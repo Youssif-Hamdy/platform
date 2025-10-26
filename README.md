@@ -6,6 +6,10 @@ A comprehensive educational platform built with React and TypeScript, featuring 
 
 This is an educational platform that supports multiple user roles: Students, Teachers, Parents, and Admins. It includes features like course management, quizzes, attendance tracking, and more. The platform uses Firebase for backend services and is built with a focus on user experience and security.
 
+# 🎬 Project Demo
+
+[▶️ Watch Demo Video](https://drive.google.com/file/d/1Q8_qWjyikWBxCqL7cRb9Lkf-JzgxQnQv/view?t=5)
+
 ## Project Structure
 
 ```
